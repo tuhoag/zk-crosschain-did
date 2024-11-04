@@ -1,0 +1,50 @@
+# Use Debian as the base image
+FROM debian:latest
+
+# Set environment variable to prevent interactive prompts
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Update package list and install prerequisites
+RUN apt-get update && \
+    apt-get install -y wget gnupg lsb-release curl build-essential pkg-config openssl libssl-dev && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*  # Clean up to reduce image size
+
+# Add PostgreSQL APT repository and GPG key
+RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list && \
+    wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
+
+# Update package list and install PostgreSQL
+RUN apt-get update && \
+    apt-get install -y postgresql postgresql-contrib && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*  # Clean up to reduce image size
+
+# Install Rust and Cargo
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && \
+    /root/.cargo/bin/rustup install stable && \
+    /root/.cargo/bin/rustup default stable && \
+    ln -s /root/.cargo/bin/cargo /usr/local/bin/cargo && \
+    ln -s /root/.cargo/bin/rustc /usr/local/bin/rustc
+
+# Install cargo-watch
+RUN cargo install cargo-watch
+
+# Set environment variables for PostgreSQL
+ENV POSTGRES_USER=myuser
+ENV POSTGRES_PASSWORD=mypassword
+ENV POSTGRES_DB=mydatabase
+
+# Expose PostgreSQL port
+EXPOSE 5432
+
+# Expose port for the web API
+EXPOSE 8000
+
+# Copy your Rust project into the container
+WORKDIR /app
+COPY . /app
+
+
+# Start PostgreSQL and then run your API
+CMD ["sh", "-c", "service postgresql start && cargo watch -x run"]
