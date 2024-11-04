@@ -2,7 +2,7 @@ use base64::{engine::general_purpose, Engine};
 use mongodb::Database;
 use serde::{Deserialize, Deserializer, Serializer};
 
-use crate::{config::Config, db, services::status_service::StatusServices};
+use crate::{config::Config, errors::AppResult, db, services::status_service::StatusServices};
 
 pub fn u64_to_base64<S>(num: &u64, serializer: S) -> Result<S::Ok, S::Error>
 where
@@ -40,7 +40,7 @@ pub struct AppData {
 }
 
 impl AppData {
-    pub async fn new(config: &Config) -> mongodb::error::Result<Self> {
+    pub async fn new(config: &Config) -> AppResult<Self> {
         match db::get_db(config).await {
             Ok(database) => {
                 let service = StatusServices::new(&database);

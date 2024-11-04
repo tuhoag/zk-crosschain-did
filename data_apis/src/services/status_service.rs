@@ -1,11 +1,10 @@
 use bson::{doc, Bson};
 use futures_util::TryStreamExt;
-use mongodb::{error::Error, Collection, Database};
+use mongodb::{Collection, Database};
 use std::collections::HashMap;
 
 use crate::{
-    config::DEFAULT_STATUSES_COLLECTION_NAME,
-    models::status_state::{StatusQuery, StatusState, StatusType},
+    config::DEFAULT_STATUSES_COLLECTION_NAME, errors::AppResult, models::status_state::{StatusQuery, StatusState, StatusType}
 };
 
 #[derive(Debug, Clone)]
@@ -23,32 +22,32 @@ impl StatusServices {
         }
     }
 
-    pub async fn reset(&self) -> Result<(), Error> {
+    pub async fn reset(&self) -> AppResult<()> {
         self.delete_all().await?;
         self.insert_first_status().await?;
         Ok(())
     }
 
-    pub async fn initialize(&self) -> Result<(), Error> {
+    pub async fn initialize(&self) -> AppResult<()> {
         // create the first status
         self.insert_first_status().await?;
         Ok(())
     }
 
-    pub async fn insert_first_status(&self) -> Result<(), Error> {
+    pub async fn insert_first_status(&self) -> AppResult<()> {
         // create the first status
         let first_status = StatusState::new(0, 0, "proof", StatusType::BitStatusList, "signature");
         self.insert_one(&first_status).await?;
         Ok(())
     }
 
-    pub async fn insert_one(&self, status: &StatusState) -> Result<(), Error> {
+    pub async fn insert_one(&self, status: &StatusState) -> AppResult<()> {
         self.collections.get(&status.status_type).unwrap().insert_one(status).await?;
 
         Ok(())
     }
 
-    pub async fn get_statuses(&self, status_type: StatusType, query: &StatusQuery) -> Result<Vec<StatusState>, Error> {
+    pub async fn get_statuses(&self, status_type: StatusType, query: &StatusQuery) -> AppResult<Vec<StatusState>> {
         let start_time = Bson::Int64(query.time.unwrap_or(0) as i64);
         let collection = self.collections.get(&status_type).unwrap();
         let cursor = collection
@@ -60,7 +59,7 @@ impl StatusServices {
         Ok(statuses)
     }
 
-    pub async fn get_latest_status(&self, status_type: StatusType) -> Result<StatusState, Error> {
+    pub async fn get_latest_status(&self, status_type: StatusType) -> AppResult<StatusState> {
         // Find the document with the highest time value
         let collection = self.collections.get(&status_type).unwrap();
         let status = collection
@@ -72,7 +71,7 @@ impl StatusServices {
         Ok(status.unwrap())
     }
 
-    pub async fn delete_all(&self) -> Result<(), Error> {
+    pub async fn delete_all(&self) -> AppResult<()> {
         for collection in self.collections.values() {
             collection.delete_many(doc! {}).await?;
         }
