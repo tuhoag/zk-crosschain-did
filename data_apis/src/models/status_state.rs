@@ -2,11 +2,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::utils::{base64_to_u64, u64_to_base64};
 
-#[derive(Deserialize, Debug)]
-pub struct StatusQuery {
-    pub time: Option<u64>,
-}
-
 #[derive(Serialize, Deserialize, Debug, Copy, Clone, Hash, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum StatusType {
@@ -29,26 +24,28 @@ impl StatusType {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct StatusState {
     #[serde(serialize_with = "u64_to_base64", deserialize_with = "base64_to_u64")]
-    status: u64,
-    time: u64,
-    proof: String,
+    pub status: u64,
+    pub time: u64,
+    pub proof: String,
     pub status_type: StatusType,
-    signature: String,
+    pub num_credentials: u64,
+    pub signature: String,
 }
 
 impl StatusState {
-    pub fn new(status: u64, time: u64, proof: &str, status_type: StatusType, signature: &str) -> Self {
+    pub fn new(status: u64, time: u64, proof: &str, status_type: StatusType, num_credentials: u64, signature: &str) -> Self {
         Self {
             status: status,
             time: time,
             proof: proof.to_string(),
             status_type,
+            num_credentials,
             signature: signature.to_string(),
         }
     }
 
     pub fn get_sample_status() -> StatusState {
-        let status = StatusState::new(0, 0, "proof", StatusType::BitStatusList, "signature");
+        let status = StatusState::new(0, 0, "proof", StatusType::BitStatusList, 0, "signature");
         status
     }
 

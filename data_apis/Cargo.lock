@@ -882,8 +882,10 @@ dependencies = [
  "cargo-watch",
  "futures-util",
  "mongodb",
+ "ring",
  "serde",
  "serde_json",
+ "sha2",
  "tokio",
 ]
 

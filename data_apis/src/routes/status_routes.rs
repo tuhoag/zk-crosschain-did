@@ -1,8 +1,8 @@
 use actix_web::{web::{self, Data}, HttpResponse, Responder};
 
-use crate::{models::status_state::{StatusQuery, StatusState, StatusType}, utils::AppData};
+use crate::{models::{request_params::StatusQueryParams, status_state::{StatusState, StatusType}}, utils::AppData};
 
-async fn get_all_statuses(status_type: web::Path<StatusType>, query: web::Query<StatusQuery>, app_data: Data<AppData>) -> impl Responder {
+async fn get_all_statuses(status_type: web::Path<StatusType>, query: web::Query<StatusQueryParams>, app_data: Data<AppData>) -> impl Responder {
     let service = &app_data.status_service;
     match service.get_statuses(*status_type, &query).await {
         Ok(statuses) => HttpResponse::Ok().json(statuses),

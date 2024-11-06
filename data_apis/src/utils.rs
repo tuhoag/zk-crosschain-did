@@ -1,8 +1,9 @@
 use base64::{engine::general_purpose, Engine};
 use mongodb::Database;
 use serde::{Deserialize, Deserializer, Serializer};
+use sha2::{Digest, Sha256};
 
-use crate::{config::Config, errors::AppResult, db, services::status_service::StatusServices};
+use crate::{config::Config, db, errors::AppResult, services::{credential_service::CredentialService, status_service::StatusService}};
 
 pub fn u64_to_base64<S>(num: &u64, serializer: S) -> Result<S::Ok, S::Error>
 where
@@ -35,7 +36,8 @@ where
 #[derive(Debug, Clone)]
 pub struct AppData {
     pub database: Database,
-    pub status_service: StatusServices,
+    pub status_service: StatusService,
+    pub credential_service: CredentialService,
     pub config: Config,
 }
 
@@ -43,15 +45,23 @@ impl AppData {
     pub async fn new(config: &Config) -> AppResult<Self> {
         match db::get_db(config).await {
             Ok(database) => {
-                let service = StatusServices::new(&database);
+                let status_service = StatusService::new(&database);
+                let credential_service = CredentialService::new(&database);
 
                 Ok(Self {
                     database: database,
-                    status_service: service,
+                    status_service: status_service,
+                    credential_service: credential_service,
                     config: config.clone(),
                 })
             }
             Err(e) => Err(e),
         }
     }
+}
+
+pub fn calculate_hash(data: &[u8]) -> Vec<u8> {
+    let mut hasher = Sha256::new();
+    hasher.update(data);
+    hasher.finalize().to_vec()
 }

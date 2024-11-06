@@ -4,15 +4,15 @@ use mongodb::{Collection, Database};
 use std::collections::HashMap;
 
 use crate::{
-    config::DEFAULT_STATUSES_COLLECTION_NAME, errors::AppResult, models::status_state::{StatusQuery, StatusState, StatusType}
+    config::DEFAULT_STATUSES_COLLECTION_NAME, errors::AppResult, models::{request_params::StatusQueryParams, status_state::{StatusState, StatusType}}
 };
 
 #[derive(Debug, Clone)]
-pub struct StatusServices {
+pub struct StatusService {
     pub collections: HashMap<StatusType, Collection<StatusState>>,
 }
 
-impl StatusServices {
+impl StatusService {
     pub fn new(database: &Database) -> Self {
         Self {
             collections: [
@@ -36,7 +36,7 @@ impl StatusServices {
 
     pub async fn insert_first_status(&self) -> AppResult<()> {
         // create the first status
-        let first_status = StatusState::new(0, 0, "proof", StatusType::BitStatusList, "signature");
+        let first_status = StatusState::new(0, 0, "proof", StatusType::BitStatusList, 0, "signature");
         self.insert_one(&first_status).await?;
         Ok(())
     }
@@ -47,7 +47,7 @@ impl StatusServices {
         Ok(())
     }
 
-    pub async fn get_statuses(&self, status_type: StatusType, query: &StatusQuery) -> AppResult<Vec<StatusState>> {
+    pub async fn get_statuses(&self, status_type: StatusType, query: &StatusQueryParams) -> AppResult<Vec<StatusState>> {
         let start_time = Bson::Int64(query.time.unwrap_or(0) as i64);
         let collection = self.collections.get(&status_type).unwrap();
         let cursor = collection
