@@ -7,8 +7,9 @@ async fn main() -> std::io::Result<()> {
     println!("Loading configuration...");
     let config = load_config();
 
-    match AppData::new(&config).await {
-        Ok(app_data) => {
+    for _ in 0..config.max_trial {
+        println!("Initializing services...");
+        if let Ok(app_data) = AppData::new(&config).await {
             println!("Starting server {:?} at {:?}", config.name, config.api_port);
 
             HttpServer::new(move || {
@@ -18,11 +19,9 @@ async fn main() -> std::io::Result<()> {
             })
             .bind(("0.0.0.0", config.api_port))? // Corrected IP and port syntax
             .run()
-            .await // Await the server's run method
-        }
-        Err(e) => {
-            eprintln!("Failed to initialize app data: {:?}", e);
-            Err(std::io::Error::new(std::io::ErrorKind::Other, "Initialization failed"))
+            .await?; // Await the server's run method
         }
     }
+
+    Ok(())
 }

@@ -1,4 +1,5 @@
 use std::error;
+use actix_web::ResponseError;
 use mongodb::error::Error as MongoError;
 use serde_json::Error as SerdeError;
 
@@ -39,3 +40,11 @@ impl From<base64::DecodeError> for AppError {
         AppError::SerializationError(error.to_string())
     }
 }
+
+impl From<bson::oid::Error> for AppError {
+    fn from(error: bson::oid::Error) -> Self {
+        AppError::SerializationError(error.to_string())
+    }
+}
+
+impl ResponseError for AppError { }

@@ -4,8 +4,10 @@ use mongodb::{Collection, Database};
 use std::collections::HashMap;
 
 use crate::{
-    config::DEFAULT_STATUSES_COLLECTION_NAME, errors::AppResult, models::{request_params::StatusQueryParams, status_state::{StatusState, StatusType}}
+    config::{Config, DEFAULT_STATUSES_COLLECTION_NAME}, errors::AppResult, models::{credential::Credential, request_params::{CredentialIssuanceParams, StatusQueryParams}, status_state::{StatusState, StatusType}}
 };
+
+use super::credential_service::CredentialService;
 
 #[derive(Debug, Clone)]
 pub struct StatusService {
@@ -77,6 +79,29 @@ impl StatusService {
         }
 
         Ok(())
+    }
+
+    pub async fn add_credential(&self, issuance_params: &CredentialIssuanceParams, status_type: &StatusType, credential_service: &CredentialService, config: &Config) -> AppResult<Credential> {
+        // get last status
+        let mut last_status = self.get_latest_status(*status_type).await?;
+
+        // create a new credential
+        let status_url = config.api_url.clone();
+        let mut credential = Credential::new(&issuance_params.subject, &issuance_params.data, status_type, last_status.num_credentials, &status_url, last_status.time);
+        credential.update_hash();
+
+        // add the credential to db
+        credential_service.insert_one(&mut credential).await?;
+
+        // increase the number of credentials
+        last_status.num_credentials += 1;
+        last_status.time += 1;
+        last_status.id = None;
+
+        // insert a new status with the updated number of credentials
+        self.insert_one(&last_status).await?;
+
+        Ok(credential)
     }
 }
 

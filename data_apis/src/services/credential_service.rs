@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
-use bson::{doc, Bson};
+use bson::{doc, oid::ObjectId};
+use futures_util::TryStreamExt;
 use mongodb::{Collection, Database};
 
-use crate::{config::{Config, DEFAULT_CREDENTIALS_COLLECTION_NAME}, errors::AppResult, models::{credential::Credential, request_params::CredentialIssuanceParams, status_state::{StatusState, StatusType}}};
+use crate::{config::DEFAULT_CREDENTIALS_COLLECTION_NAME, errors::AppResult, models::{credential::Credential, status_state::StatusType}};
 
-use super::status_service::StatusService;
 
 #[derive(Debug, Clone)]
 pub struct CredentialService {
@@ -35,29 +35,26 @@ impl CredentialService {
         Ok(())
     }
 
-    pub async fn issue(&self, issuance_params: &CredentialIssuanceParams, status_type: &StatusType, status_service: &StatusService, config: &Config) -> AppResult<Credential> {
-        let last_status = status_service.get_latest_status(*status_type).await.unwrap();
-        let status_url = config.api_url.clone();
-
-        let mut credential = Credential::new(&issuance_params.subject, &issuance_params.data, last_status.status_type, last_status.num_credentials, &status_url, last_status.time);
-        credential.update_hash();
-
-        self.insert_one(&mut credential).await?;
-        Ok(credential)
-    }
-
     pub async fn insert_one(&self, credential: &mut Credential) -> AppResult<()> {
         let collection = self.collections.get(&credential.status_type).unwrap();
-        collection.insert_one(&mut *credential).await?;
-        // credential.id = res.inserted_id.as_object_id();
+        let res = collection.insert_one(&mut *credential).await?;
+        credential.id = res.inserted_id.as_object_id();
         Ok(())
     }
 
-    pub async fn get_credential(&self, status_type: StatusType, id: u64) -> AppResult<Credential> {
+    pub async fn get_credential_by_id(&self, status_type: &StatusType, id: &str) -> AppResult<Credential> {
+        let object_id = ObjectId::parse_str(id)?;
         let collection = self.collections.get(&status_type).unwrap();
-        let filter = doc! { "_id": Bson::Int64(id as i64) };
+        let filter = doc! { "_id": object_id};
         let credential = collection.find_one(filter).await?;
 
         Ok(credential.unwrap())
+    }
+
+    pub async fn get_all_credentials(&self, status_type: StatusType) -> AppResult<Vec<Credential>> {
+        let collection = self.collections.get(&status_type).unwrap();
+        let cursor = collection.find(doc! {}).await?;
+        let credentials = cursor.try_collect::<Vec<Credential>>().await?;
+        Ok(credentials)
     }
 }

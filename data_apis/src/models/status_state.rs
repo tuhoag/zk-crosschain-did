@@ -1,3 +1,4 @@
+use bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
 use crate::utils::{base64_to_u64, u64_to_base64};
@@ -23,6 +24,14 @@ impl StatusType {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct StatusState {
+    #[serde(
+        rename = "_id",
+        skip_serializing_if = "Option::is_none",
+        // serialize_with = "serialize_object_id_as_string",
+        // deserialize_with = "deserialize_object_id_from_string"
+    )]
+    pub id: Option<ObjectId>,
+
     #[serde(serialize_with = "u64_to_base64", deserialize_with = "base64_to_u64")]
     pub status: u64,
     pub time: u64,
@@ -35,6 +44,7 @@ pub struct StatusState {
 impl StatusState {
     pub fn new(status: u64, time: u64, proof: &str, status_type: StatusType, num_credentials: u64, signature: &str) -> Self {
         Self {
+            id: None,
             status: status,
             time: time,
             proof: proof.to_string(),

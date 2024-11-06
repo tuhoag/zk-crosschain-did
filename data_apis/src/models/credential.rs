@@ -1,8 +1,7 @@
 use base64::{engine::general_purpose, Engine};
-use std::collections::HashMap;
 use bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
-
+use std::collections::HashMap;
 
 use crate::utils::calculate_hash;
 
@@ -10,7 +9,12 @@ use super::status_state::StatusType;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Credential {
-    #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "_id",
+        skip_serializing_if = "Option::is_none",
+        // serialize_with = "serialize_object_id_as_string",
+        // deserialize_with = "deserialize_object_id_from_string"
+    )]
     pub id: Option<ObjectId>,
     pub subject: String,
     pub data: HashMap<String, String>,
@@ -19,20 +23,27 @@ pub struct Credential {
     pub status_url: String,
     pub time: u64,
 
-    #[serde(skip_serializing_if="Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub hash: Option<String>,
 
-    #[serde(skip_serializing_if="Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub signature: Option<String>,
 }
 
 impl Credential {
-    pub fn new(subject: &str, data: &HashMap<String, String>, status_type: StatusType, index: u64, status_url: &str, time: u64) -> Self {
+    pub fn new(
+        subject: &str,
+        data: &HashMap<String, String>,
+        status_type: &StatusType,
+        index: u64,
+        status_url: &str,
+        time: u64,
+    ) -> Self {
         Self {
             id: None,
             subject: subject.to_string(),
             data: data.clone(),
-            status_type,
+            status_type: *status_type,
             index,
             status_url: status_url.to_string(),
             time,
@@ -43,7 +54,14 @@ impl Credential {
 
     pub fn get_sample_credential() -> Credential {
         let data = HashMap::new();
-        let credential = Credential::new("holder1", &data, StatusType::BitStatusList, 0, "status_url", 0);
+        let credential = Credential::new(
+            "holder1",
+            &data,
+            &StatusType::BitStatusList,
+            0,
+            "status_url",
+            0,
+        );
         credential
     }
 
@@ -61,8 +79,6 @@ impl Credential {
 
     // pub fn calculate_signature(&self, private_key: &[u8]) -> Signature {
     //     let hash = self.calculate_hash();
-
-
 
     //     Signature {r, s }
     // }

@@ -1,7 +1,9 @@
 use base64::{engine::general_purpose, Engine};
+use bson::oid::ObjectId;
 use mongodb::Database;
 use serde::{Deserialize, Deserializer, Serializer};
 use sha2::{Digest, Sha256};
+use serde::de::Error as DeError;
 
 use crate::{config::Config, db, errors::AppResult, services::{credential_service::CredentialService, status_service::StatusService}};
 
@@ -31,6 +33,28 @@ where
     let mut num_bytes = [0u8; 8];
     num_bytes.copy_from_slice(&decoded_bytes);
     Ok(u64::from_be_bytes(num_bytes))
+}
+
+// Serialize `ObjectId` as a simple string
+pub fn serialize_object_id_as_string<S>(object_id: &Option<ObjectId>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    println!("serialize object id: {:?}", object_id);
+    match object_id {
+        Some(oid) => serializer.serialize_str(&oid.to_hex()), // Convert ObjectId to hex string
+        None => serializer.serialize_none(),
+    }
+}
+
+// Deserialize `ObjectId` from a string
+pub fn deserialize_object_id_from_string<'de, D>(deserializer: D) -> Result<Option<ObjectId>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s: Option<String> = Option::deserialize(deserializer)?;
+    println!("deserialize object id s: {:?}", s);
+    s.map(|str| ObjectId::parse_str(&str).map_err(DeError::custom)).transpose()
 }
 
 #[derive(Debug, Clone)]

@@ -1,18 +1,21 @@
-use actix_web::{web::{self, Data}, HttpResponse, Responder};
+use actix_web::{web::{self, Data, Json}, Responder};
 
-use crate::utils::AppData;
+use crate::{errors::AppResult, utils::AppData};
 
-async fn get_configuration(app_data: Data<AppData>) -> impl Responder {
+async fn get_configuration(app_data: Data<AppData>) -> AppResult<impl Responder> {
     println!("Getting configuration");
     let config = &app_data.config;
-    HttpResponse::Ok().json(config)
+    Ok(Json(config.clone()))
 }
 
-async fn reset(app_data: Data<AppData>) -> impl Responder {
-    match app_data.status_service.reset().await {
-        Ok(_) => HttpResponse::Ok().body("Resetting"),
-        Err(e) => HttpResponse::InternalServerError().body(format!("Error resetting: {}", e)),
-    }
+async fn reset(app_data: Data<AppData>) -> AppResult<impl Responder> {
+    let status_service = &app_data.status_service;
+    let credential_service = &app_data.credential_service;
+
+    credential_service.reset().await?;
+    status_service.reset().await?;
+
+    Ok(Json("Reset credentials and status"))
 }
 
 
