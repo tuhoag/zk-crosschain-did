@@ -5,6 +5,7 @@ use serde::{Deserialize, Deserializer, Serializer};
 use sha2::{Digest, Sha256};
 use serde::de::Error as DeError;
 
+
 use crate::{config::Config, db, errors::AppResult, services::{credential_service::CredentialService, status_service::StatusService}};
 
 pub fn u64_to_base64<S>(num: &u64, serializer: S) -> Result<S::Ok, S::Error>
@@ -84,8 +85,13 @@ impl AppData {
     }
 }
 
-pub fn calculate_hash(data: &[u8]) -> Vec<u8> {
+pub fn calculate_sha256_hash(data: &[u8]) -> Vec<u8> {
     let mut hasher = Sha256::new();
     hasher.update(data);
     hasher.finalize().to_vec()
+}
+
+pub fn calculate_poseidon_hash() -> AppResult<()> {
+    // converting data to Fr
+   unimplemented!("This function must be implemented after checking poseidon hash crates");
 }
