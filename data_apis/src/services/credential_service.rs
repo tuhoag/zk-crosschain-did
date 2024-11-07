@@ -92,7 +92,7 @@ impl CredentialService {
         Ok(api_url.to_string())
     }
 
-    pub async fn add_credential(&self, issuance_params: &CredentialIssuanceParams, status_mechanism: &StatusMechanism, status_service: &StatusService, config: &Config) -> AppResult<Credential> {
+    pub async fn issue_credential(&self, issuance_params: &CredentialIssuanceParams, status_mechanism: &StatusMechanism, status_service: &StatusService, config: &Config) -> AppResult<Credential> {
         // get status url
         let issuance_status_url = Self::build_status_url(status_mechanism, &StatusType::Issuance, &config.api_url)?;
         let revocation_status_url = Self::build_status_url(status_mechanism, &StatusType::Revocation, &config.api_url)?;
@@ -124,6 +124,20 @@ impl CredentialService {
         last_issuance_status.time = time;
         last_issuance_status.signature = None;
         status_service.insert_one(&last_issuance_status).await?;
+
+        Ok(credential)
+    }
+
+    pub async fn revoke_credential(&self, id: &str, status_mechanism: &StatusMechanism, status_service: &StatusService) -> AppResult<Credential> {
+        // get the credential by id
+        let credential = self.get_credential_by_id(status_mechanism, id).await?;
+
+        let mut last_revocation_status = status_service.get_latest_status(status_mechanism, &StatusType::Revocation).await?;
+        last_revocation_status.update_index_status(credential.index);
+        last_revocation_status.id = None;
+        last_revocation_status.time = chrono::Utc::now().timestamp() as u64;
+        last_revocation_status.signature = None;
+        status_service.insert_one(&last_revocation_status).await?;
 
         Ok(credential)
     }
