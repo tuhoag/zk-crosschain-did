@@ -1,0 +1,3 @@
+[submodule "status_registry_sol/status_registry/lib/forge-std"]
+	path = status_registry_sol/status_registry/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
