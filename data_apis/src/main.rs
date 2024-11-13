@@ -7,7 +7,7 @@ async fn main() -> std::io::Result<()> {
     println!("Loading configuration...");
     let config = load_config();
 
-    for _ in 0..config.max_trial {
+    loop {
         println!("Initializing services...");
         if let Ok(app_data) = AppData::new(&config).await {
             println!("Starting server {:?} at {:?}", config.name, config.api_port);
@@ -23,5 +23,5 @@ async fn main() -> std::io::Result<()> {
         }
     }
 
-    Ok(())
+    // Ok(())
 }
