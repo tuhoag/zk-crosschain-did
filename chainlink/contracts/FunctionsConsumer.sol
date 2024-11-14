@@ -72,4 +72,8 @@ contract FunctionsConsumer is FunctionsClient, ConfirmedOwner {
     s_lastResponse = response;
     s_lastError = err;
   }
+
+  function getLastStatus() external view returns (bytes memory) {
+    return s_lastResponse;
+  }
 }

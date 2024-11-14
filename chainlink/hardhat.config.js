@@ -1,6 +1,7 @@
 require("@nomicfoundation/hardhat-toolbox")
 require("hardhat-contract-sizer")
 require("./tasks")
+
 const { networks } = require("./networks")
 
 // Enable gas reporting (optional)
