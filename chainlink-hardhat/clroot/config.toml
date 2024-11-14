@@ -1,0 +1,21 @@
+RootDir = './clroot'
+
+[Log]
+JSONConsole = true
+Level = 'debug'
+
+[WebServer]
+AllowOrigins = '*'
+SecureCookies = false
+SessionTimeout = '999h0m0s'
+
+[WebServer.TLS]
+HTTPSPort = 0
+
+[[EVM]]
+ChainID = '1337' # Required
+
+[[EVM.Nodes]]
+Name = 'local' # Required
+WSURL = 'ws://host.docker.internal:8545'
+HTTPURL = 'http://host.docker.internal:8545'
