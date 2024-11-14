@@ -4,3 +4,6 @@
 [submodule "status_registry_sol/lib/forge-std"]
 	path = status_registry_sol/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
+[submodule "chainlink-foundry/lib/forge-std"]
+	path = chainlink-foundry/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
