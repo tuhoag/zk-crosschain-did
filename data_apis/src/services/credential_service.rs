@@ -101,7 +101,8 @@ impl CredentialService {
         let index = self.get_next_credential_index(status_mechanism).await?;
 
         // get current time
-        let time = chrono::Utc::now().timestamp() as u64;
+        // let time = chrono::Utc::now().timestamp() as u64;
+        let time = index + 1;
 
         // create a new credential
         let mut credential = Credential::new(
@@ -135,7 +136,7 @@ impl CredentialService {
         let mut last_revocation_status = status_service.get_latest_status(status_mechanism, &StatusType::Revocation).await?;
         last_revocation_status.update_index_status(credential.index);
         last_revocation_status.id = None;
-        last_revocation_status.time = chrono::Utc::now().timestamp() as u64;
+        last_revocation_status.time += 1;
         last_revocation_status.signature = None;
         status_service.insert_one(&last_revocation_status).await?;
 

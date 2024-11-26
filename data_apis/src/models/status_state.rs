@@ -81,7 +81,8 @@ impl StatusState {
     }
 
     pub fn get_initial_status(status_mechanism: StatusMechanism, status_type: StatusType) -> StatusState {
-        let time = chrono::Utc::now().timestamp() as u64;
+        // let time = chrono::Utc::now().timestamp() as u64;
+        let time = 0;
         match status_mechanism {
             StatusMechanism::BitStatusList => {
                 StatusState::new(0, time, status_mechanism, status_type)

@@ -1,6 +1,7 @@
 use actix_web::{web, App, HttpServer};
 use data_apis::{config::load_config, routes::{self}, utils::AppData};
-
+use actix_web::middleware::Logger;
+use env_logger::Env;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -12,9 +13,12 @@ async fn main() -> std::io::Result<()> {
         if let Ok(app_data) = AppData::new(&config).await {
             println!("Starting server {:?} at {:?}", config.name, config.api_port);
 
+            env_logger::init_from_env(Env::default().default_filter_or("info"));
+
             HttpServer::new(move || {
                 App::new()
                     .app_data(web::Data::new(app_data.clone())) // Clone app_data for each instance
+                    .wrap(Logger::default())
                     .configure(routes::initialize)
             })
             .bind(("0.0.0.0", config.api_port))? // Corrected IP and port syntax
