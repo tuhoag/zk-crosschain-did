@@ -1,13 +1,26 @@
+// Imports
+const ethers = await import("npm:ethers@6.10.0");
 const { Buffer } = await import("node:buffer")
 
-const lastStatus = args[0];
-const lastStatusTime = args[1];
-const decodedLastStatus = Buffer.from(lastStatus, 'base64').readBigInt64BE(0);
+const domain = args[0];
+const lastStatus = args[1];
+const lastStatusTime = args[2];
+
+console.log(`domain: ${domain}`);
+console.log(`lastStatus: ${lastStatus}`);
+console.log(`lastStatusTime: ${lastStatusTime}`);
+
+let decodedLastStatus;
+if (lastStatus == "") {
+    decodedLastStatus = 0;
+} else {
+    decodedLastStatus = Buffer.from(lastStatus, 'base64').readBigInt64BE(0);
+}
 
 // Use multiple APIs & aggregate the results to enhance decentralization
 let urls = [
-    `http://localhost:3000/statuses/bsl/issuance?time=${lastStatusTime}`,
-    `http://localhost:3000/statuses/bsl/issuance?time=${lastStatusTime}`,
+    `${domain}/statuses/bsl/issuance?time=${lastStatusTime}`,
+    // `${domain}/statuses/bsl/issuance?time=${lastStatusTime}`,
 ];
 
 let requests = urls.map(url => Functions.makeHttpRequest({url: url}));
@@ -41,37 +54,82 @@ const parser = (key, value) => {
     return value;
 };
 
-console.log(`collected statuses: ${JSON.stringify(statuses, parser)}`);
+console.log(`num of statuses: ${statuses.length}`);
+if (statuses.length == 0) {
+    const abiCoder = ethers.AbiCoder.defaultAbiCoder();
+    const encoded = abiCoder.encode(
+        ["uint64", "string"],
+        [ 0, "" ]
+    );
+    const bytes = ethers.getBytes(encoded);
+    console.log(`returned ${bytes.length} bytes`);
+    return bytes;
+} else {
+    console.log(`collected statuses: ${JSON.stringify(statuses, parser)}`);
+    let validStatuses = [];
+    for (let i = 0; i < statuses.length; i++) {
+        let curValidStatuses = [];
+        let curStatuses = statuses[i];
+        let preDecodedStatus = decodedLastStatus;
 
-let validStatuses = [];
-for (let i = 0; i < statuses.length; i++) {
-    let curValidStatuses = [];
-    let curStatuses = statuses[i];
-    let preDecodedStatus = decodedLastStatus;
+        for (let j = 0; j < curStatuses.length; j++) {
+            let status = curStatuses[j];
+            console.log(`checking status: preDecodedStatus: ${preDecodedStatus}, status: ${status.decodedStatus}`);
 
-    for (let j = 0; j < curStatuses.length; j++) {
-        let status = curStatuses[j];
-        if ((status.decodedStatus & preDecodedStatus) !== preDecodedStatus) {
-            curValidStatuses.clear();
-            break;
+            if ((status.decodedStatus & preDecodedStatus) !== preDecodedStatus) {
+                console.log(`invalid status: preDecodedStatus: ${preDecodedStatus}, status: ${status.decodedStatus}`);
+                curValidStatuses = [];
+                break;
+            }
+
+            preDecodedStatus = status.decodedStatus;
+            curValidStatuses.push(status);
         }
 
-        curValidStatuses.push(status);
+        validStatuses.push(curValidStatuses);
     }
 
-    validStatuses.push(curValidStatuses);
-}
+    console.log(`num of valid statuses: ${validStatuses.length}`);
+    console.log(`valid statuses: ${JSON.stringify(validStatuses, parser)}`);
 
-console.log(`valid statuses: ${JSON.stringify(validStatuses, parser)}`);
-
-let maxLen = 0;
-let maxIndex = -1;
-for (let i = 0; i < validStatuses.length; i++) {
-    if (validStatuses[i].length >= maxLen) {
-        maxIndex = i;
-        maxLen = validStatuses[i].length;
+    let maxLen = 0;
+    let maxIndex = -1;
+    for (let i = 0; i < validStatuses.length; i++) {
+        if (validStatuses[i].length >= maxLen) {
+            maxIndex = i;
+            maxLen = validStatuses[i].length;
+        }
     }
-}
 
-// return Functions.encodeString(statuses[statuses.length - 1].status)
-return Functions.encodeString(validStatuses[maxIndex][maxLen - 1].status)
+    console.log(`maxLen: ${maxLen}`);
+    console.log(`maxIndex: ${maxIndex}`);
+
+    // ABI encoding
+    console.log(validStatuses[maxIndex][maxLen - 1]);
+    const { time, status_mechanism, status_type, status } = validStatuses[maxIndex][maxLen - 1];
+
+    let status_mechanism_index = 0;
+    if (status_mechanism == "bsl") {
+        status_mechanism_index = 0;
+    } else if (status_mechanism == "mt") {
+        status_mechanism_index = 1;
+    }
+
+    let status_type_index = 0;
+    if (status_type == "issuance") {
+        status_type_index = 1;
+    } else if (status_type == "revocation") {
+        status_type_index = 2;
+    } else {
+        status_type_index = 0;
+    }
+
+    const abiCoder = ethers.AbiCoder.defaultAbiCoder();
+    const encoded = abiCoder.encode(
+        ["uint64", "string"],
+        [ time, status ]
+    );
+    const bytes = ethers.getBytes(encoded);
+    console.log(`returned ${bytes.length} bytes`);
+    return bytes;
+}

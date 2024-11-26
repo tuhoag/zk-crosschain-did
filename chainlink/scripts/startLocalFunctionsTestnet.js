@@ -6,7 +6,7 @@ const { utils, Wallet } = require("ethers")
 // Loads environment variables from .env.enc file (if it exists)
 require("@chainlink/env-enc").config("../.env.enc")
 ;(async () => {
-  const requestConfigPath = path.join(process.cwd(), "Functions-request-config.js") // @dev Update this to point to your desired request config file
+  const requestConfigPath = path.join(process.cwd(), "Functions-request-config.ts") // @dev Update this to point to your desired request config file
   console.log(`Using Functions request config file ${requestConfigPath}\n`)
 
   const localFunctionsTestnetInfo = await startLocalFunctionsTestnet(

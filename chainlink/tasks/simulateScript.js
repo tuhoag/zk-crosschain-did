@@ -6,7 +6,7 @@ task("functions-simulate-script", "Executes the JavaScript source code locally")
   .addOptionalParam(
     "configpath",
     "Path to Functions request config file",
-    `${__dirname}/../Functions-request-config.js`,
+    `${__dirname}/../Functions-request-config.ts`,
     types.string
   )
   .setAction(async (taskArgs, hre) => {
@@ -14,6 +14,7 @@ task("functions-simulate-script", "Executes the JavaScript source code locally")
       ? taskArgs.configpath
       : path.join(process.cwd(), taskArgs.configpath))
 
+      // console.log(requestConfig);
     // Simulate the JavaScript execution locally
     const { responseBytesHexstring, errorString, capturedTerminalOutput } = await simulateScript(requestConfig)
     console.log(`${capturedTerminalOutput}\n`)

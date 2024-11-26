@@ -2,12 +2,16 @@ const { types } = require("hardhat/config")
 const { networks } = require("../../networks")
 
 task("functions-deploy-consumer", "Deploys the FunctionsConsumer contract")
+  .addParam("name", "Consumer Contract name", "FunctionsConsumer", types.string)
   .addOptionalParam("verify", "Set to true to verify contract", false, types.boolean)
   .setAction(async (taskArgs) => {
-    console.log(`Deploying FunctionsConsumer contract to ${network.name}`)
+    const consumerContractName = taskArgs.name
+
+    console.log(`Deploying ${consumerContractName} contract to ${network.name}`)
 
     const functionsRouter = networks[network.name]["functionsRouter"]
     const donIdBytes32 = hre.ethers.utils.formatBytes32String(networks[network.name]["donId"])
+
 
     console.log("\n__Compiling Contracts__")
     await run("compile")
@@ -22,7 +26,7 @@ task("functions-deploy-consumer", "Deploys the FunctionsConsumer contract")
       overrides.nonce = networks[network.name].nonce
     }
 
-    const consumerContractFactory = await ethers.getContractFactory("FunctionsConsumer")
+    const consumerContractFactory = await ethers.getContractFactory(consumerContractName)
     const consumerContract = await consumerContractFactory.deploy(functionsRouter, donIdBytes32, overrides)
 
     console.log(
@@ -35,7 +39,7 @@ task("functions-deploy-consumer", "Deploys the FunctionsConsumer contract")
     console.log("\nDeployed FunctionsConsumer contract to:", consumerContract.address)
 
     if (network.name === "localFunctionsTestnet") {
-      return
+      return consumerContract;
     }
 
     const verifyContract = taskArgs.verify
@@ -67,4 +71,5 @@ task("functions-deploy-consumer", "Deploys the FunctionsConsumer contract")
     }
 
     console.log(`\nFunctionsConsumer contract deployed to ${consumerContract.address} on ${network.name}`)
+    return consumerContract;
   })

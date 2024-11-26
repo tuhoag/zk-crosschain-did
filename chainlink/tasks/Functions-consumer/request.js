@@ -16,6 +16,7 @@ const path = require("path")
 const process = require("process")
 
 task("functions-request", "Initiates an on-demand request from a Functions consumer contract")
+  .addParam("name", "Consumer Contract name", "FunctionsConsumer", types.string)
   .addParam("contract", "Address of the consumer contract to call")
   .addParam("subid", "Billing subscription ID used to pay for the request")
   .addOptionalParam(
@@ -43,21 +44,39 @@ task("functions-request", "Initiates an on-demand request from a Functions consu
     `${__dirname}/../../Functions-request-config.js`,
     types.string
   )
+  .addOptionalParam(
+    "args",
+    "Arguments to pass to the request function",
+    undefined,
+    types.string
+  )
   .setAction(async (taskArgs, hre) => {
     // Get the required parameters
+    const consumerContractName = taskArgs.name
     const contractAddr = taskArgs.contract
     const subscriptionId = parseInt(taskArgs.subid)
     const slotId = parseInt(taskArgs.slotid)
     const callbackGasLimit = parseInt(taskArgs.callbackgaslimit)
+    const argsStr = taskArgs.args
 
+    console.log(`got callback gas limit: ${callbackGasLimit}`)
     // Attach to the FunctionsConsumer contract
-    const consumerFactory = await ethers.getContractFactory("FunctionsConsumer")
+    const consumerFactory = await ethers.getContractFactory(consumerContractName)
     const consumerContract = consumerFactory.attach(contractAddr)
 
     // Get requestConfig from the specified config file
-    const requestConfig = require(path.isAbsolute(taskArgs.configpath)
+    let requestConfig = require(path.isAbsolute(taskArgs.configpath)
       ? taskArgs.configpath
       : path.join(process.cwd(), taskArgs.configpath))
+
+    let args = [];
+    if (argsStr !== undefined) {
+      args = argsStr.split(",");
+    } else {
+      args = requestConfig.args ?? [];
+    }
+
+    requestConfig.args = args;
 
     // Simulate the request
     if (taskArgs.simulate) {
@@ -189,6 +208,8 @@ task("functions-request", "Initiates an on-demand request from a Functions consu
     if (networks[network.name].nonce) {
       overrides.nonce = networks[network.name].nonce
     }
+
+    console.log(`callback gas limit: ${callbackGasLimit}`)
     const requestTx = await consumerContract.sendRequest(
       requestConfig.source,
       requestConfig.secretsLocation,
@@ -213,6 +234,8 @@ task("functions-request", "Initiates an on-demand request from a Functions consu
       `Functions request has been initiated in transaction ${requestTx.hash} with request ID ${requestTxReceipt.events[2].args.id}. Note the request ID may change if a re-org occurs, but the transaction hash will remain constant.\nWaiting for fulfillment from the Decentralized Oracle Network...\n`
     )
 
+    let result = "";
+
     try {
       // localFunctionsTestnet needs 0 or 1 confirmations to work correctly as it's local.
       // If on live testnet or mainnet, setting to undefined then uses the functions-toolkit default of 2 confirmations.
@@ -225,11 +248,13 @@ task("functions-request", "Initiates an on-demand request from a Functions consu
       switch (fulfillmentCode) {
         case FulfillmentCode.FULFILLED:
           if (responseBytesHexstring !== "0x") {
+            result = decodeResult(
+              responseBytesHexstring,
+              requestConfig.expectedReturnType
+            ).toString();
+
             spinner.succeed(
-              `Request ${requestId} fulfilled!\nResponse has been sent to consumer contract: ${decodeResult(
-                responseBytesHexstring,
-                requestConfig.expectedReturnType
-              ).toString()}\n`
+              `Request ${requestId} fulfilled!\nResponse has been sent to consumer contract: ${result}\n`
             )
           } else if (errorString.length > 0) {
             spinner.warn(`Request ${requestId} fulfilled with error: ${errorString}\n`)
@@ -267,4 +292,6 @@ task("functions-request", "Initiates an on-demand request from a Functions consu
         }
       }
     }
+
+    return result;
   })

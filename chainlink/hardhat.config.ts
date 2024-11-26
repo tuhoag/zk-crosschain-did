@@ -1,8 +1,14 @@
-require("@nomicfoundation/hardhat-toolbox")
-require("hardhat-contract-sizer")
-require("./tasks")
+import "@nomicfoundation/hardhat-toolbox";
+import "hardhat-contract-sizer";
+import "./tasks";
 
-const { networks } = require("./networks")
+// require("@nomicfoundation/hardhat-toolbox")
+// require("hardhat-contract-sizer")
+// require("./tasks")
+
+import { networks } from "./networks";
+import { HardhatUserConfig } from "hardhat/types";
+// const { networks } = require("./networks")
 
 // Enable gas reporting (optional)
 const REPORT_GAS = process.env.REPORT_GAS?.toLowerCase() === "true" ? true : false
@@ -14,8 +20,7 @@ const SOLC_SETTINGS = {
   },
 }
 
-/** @type import('hardhat/config').HardhatUserConfig */
-module.exports = {
+const config: HardhatUserConfig = {
   defaultNetwork: "localFunctionsTestnet",
   solidity: {
     compilers: [
@@ -148,3 +153,5 @@ module.exports = {
     timeout: 200000, // 200 seconds max for running tests
   },
 }
+
+export default config;

@@ -52,5 +52,7 @@ task("functions-sub-create", "Creates a new billing subscription for Functions c
       subInfo.blockedBalance = ethers.utils.formatEther(subInfo.blockedBalance) + " LINK"
 
       console.log("\nSubscription Info: ", subInfo)
+
+      return subscriptionId
     }
   })
