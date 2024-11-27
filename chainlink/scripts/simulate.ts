@@ -13,7 +13,7 @@ async function callSendRequest(consumerContract: Contract, subscriptionId: numbe
         source,
         Location.Remote,
         [],
-        ["http://localhost:3000", "AAAAAAAAAAA=", "0"],
+        ["http://localhost:3000", "0", "0", "1", "1"],
         [],
         subscriptionId.toString(),
         300_000,
@@ -25,6 +25,7 @@ async function callSendRequest(consumerContract: Contract, subscriptionId: numbe
 
 async function callRequestStatus(consumerContract: Contract, subscriptionId: number) {
     const requestTx = await consumerContract.requestStatus(
+        1,
         1,
         subscriptionId.toString(),
         300_000,
@@ -48,7 +49,7 @@ async function callRequestStatus(consumerContract: Contract, subscriptionId: num
 async function initContract(consumerContract: Contract) {
     const source = fs.readFileSync(`${__dirname}/../functions/request-statuses.js`).toString();
     await consumerContract.setSource(source);
-    await consumerContract.addIssuer(1, "http://localhost:3000");
+    await consumerContract.addIssuer(1, "http://localhost:3000", 0);
 }
 
 async function main() {

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
 import {FunctionsClient} from "@chainlink/contracts/src/v0.8/functions/v1_0_0/FunctionsClient.sol";
 import {ConfirmedOwner} from "@chainlink/contracts/src/v0.8/shared/access/ConfirmedOwner.sol";
@@ -24,22 +24,41 @@ struct StatusState {
   // StatusType statusType;
 }
 
+type IssuerId is uint8;
+
+struct Issuer {
+  string url;
+  StatusMechanism statusMechanism;
+}
+
+struct Request {
+  IssuerId issuerId;
+  StatusType statusType;
+  StatusMechanism statusMechanism;
+}
+
+struct BSLStatus {
+  uint64 time;
+  uint64 status;
+}
+
 /**
  * @title Chainlink Functions example on-demand consumer contract example
  */
 contract StatusRegistry is FunctionsClient, ConfirmedOwner {
   using FunctionsRequest for FunctionsRequest.Request;
-  type IssuerId is uint8;
 
   IssuerId public constant INVALID_ISSUER_ID = IssuerId.wrap(0);
 
   error IssuerNotFound(IssuerId issuerId);
   error RequestNotFound(bytes32 requestId);
-  error InvalidStatus(StatusState statusState);
+  error InvalidBSLStatus(bytes32 requestId);
   error InvalidIssuerId(IssuerId issuerId);
+  error InvalidStatusType(StatusType statusType);
   error EmptySource();
+  error UnsupportedStatusMechanism(StatusMechanism);
 
-  event StatusUpdated(IssuerId issuerId, StatusState status);
+  event StatusUpdated(IssuerId issuerId, StatusType statusType);
   event ResponseReceived(bytes32 requestId, bytes response, bytes error);
 
   bytes32 public donId; // DON ID for the Functions DON to which the requests are sent
@@ -48,10 +67,10 @@ contract StatusRegistry is FunctionsClient, ConfirmedOwner {
   bytes public lastError;
   string public source;
 
-  // FunctionsRequest.Request public req;
-  mapping(IssuerId => string) public issuerUrls;
-  mapping(bytes32 => IssuerId) public issuerRequestIds;
-  mapping(IssuerId => StatusState) public issuerStatuses;
+  mapping(bytes32 => Request) public requests;
+  mapping(IssuerId => Issuer) public issuers;
+  mapping(IssuerId => BSLStatus) public bslIssuanceStatuses;
+  mapping(IssuerId => BSLStatus) public bslRevocationStatuses;
 
   constructor(address router, bytes32 _donId) FunctionsClient(router) ConfirmedOwner(msg.sender) {
     donId = _donId;
@@ -65,10 +84,10 @@ contract StatusRegistry is FunctionsClient, ConfirmedOwner {
     donId = newDonId;
   }
 
-  function getIssuerUrl(IssuerId issuerId) external view returns (string memory) {
-    string memory url = issuerUrls[issuerId];
-    if (bytes(url).length == 0) revert IssuerNotFound(issuerId);
-    return url;
+  function getIssuer(IssuerId issuerId) external view returns (Issuer memory) {
+    Issuer memory issuer = issuers[issuerId];
+    if (bytes(issuer.url).length == 0) revert IssuerNotFound(issuerId);
+    return issuer;
   }
 
   function getSource() external view returns (string memory) {
@@ -80,9 +99,33 @@ contract StatusRegistry is FunctionsClient, ConfirmedOwner {
     source = _source;
   }
 
-  function addIssuer(IssuerId issuerId, string calldata url) external onlyOwner {
+  function addIssuer(IssuerId issuerId, string calldata url, StatusMechanism statusMechanism) external {
     if (IssuerId.unwrap(issuerId) == IssuerId.unwrap(INVALID_ISSUER_ID)) revert InvalidIssuerId(issuerId);
-    issuerUrls[issuerId] = url;
+    issuers[issuerId] = Issuer(url, statusMechanism);
+  }
+
+  function getBSLStatus(IssuerId issuerId, StatusType statusType) external view returns (BSLStatus memory) {
+    if (IssuerId.unwrap(issuerId) == IssuerId.unwrap(INVALID_ISSUER_ID)) revert InvalidIssuerId(issuerId);
+
+    if (statusType == StatusType.Issuance) {
+      return bslIssuanceStatuses[issuerId];
+    } else if (statusType == StatusType.Revocation) {
+      return bslRevocationStatuses[issuerId];
+    } else {
+      revert InvalidStatusType(statusType);
+    }
+  }
+
+  function setBSLStatus(IssuerId issuerId, StatusType statusType, BSLStatus memory status) external {
+    if (IssuerId.unwrap(issuerId) == IssuerId.unwrap(INVALID_ISSUER_ID)) revert InvalidIssuerId(issuerId);
+
+    if (statusType == StatusType.Issuance) {
+      bslIssuanceStatuses[issuerId] = status;
+    } else if (statusType == StatusType.Revocation) {
+      bslRevocationStatuses[issuerId] = status;
+    } else {
+      revert InvalidStatusType(statusType);
+    }
   }
 
   /**
@@ -96,23 +139,34 @@ contract StatusRegistry is FunctionsClient, ConfirmedOwner {
     // FunctionsRequest.Location secretsLocation,
     // bytes calldata encryptedSecretsReference,
     // string[] calldata args,
+    StatusType statusType,
     uint64 subscriptionId,
     uint32 callbackGasLimit
   ) external {
     if (bytes(source).length == 0) revert EmptySource();
+    if (statusType == StatusType.Invalid) revert InvalidStatusType(statusType);
 
     // get issuer URL
-    string memory url = issuerUrls[issuerId];
-    StatusState memory lastStatusState = issuerStatuses[issuerId];
+    Issuer memory issuer = issuers[issuerId];
+    if (bytes(issuer.url).length == 0) revert IssuerNotFound(issuerId);
 
-    string[] memory args = new string[](3);
-    args[0] = url;
-    args[1] = lastStatusState.status;
-    args[2] = Strings.toString(lastStatusState.time);
+    string[] memory args = new string[](5);
+    args[0] = issuer.url;
+
+    if (issuer.statusMechanism == StatusMechanism.BitStatusList) {
+      BSLStatus memory lastStatusState = this.getBSLStatus(issuerId, statusType);
+      args[1] = Strings.toString(lastStatusState.status);
+      args[2] = Strings.toString(lastStatusState.time);
+    } else {
+      revert UnsupportedStatusMechanism(issuer.statusMechanism);
+    }
+
+    args[3] = Strings.toString(uint8(statusType));
+    args[4] = Strings.toString(uint8(issuer.statusMechanism));
 
     bytes[] memory emptyBytesArray;
     bytes32 requestId = this.sendRequest(source, FunctionsRequest.Location.Remote, bytes(""), args, emptyBytesArray, subscriptionId, callbackGasLimit);
-    issuerRequestIds[requestId] = issuerId;
+    requests[requestId] = Request(issuerId, statusType, issuer.statusMechanism);
   }
 
   /**
@@ -160,33 +214,38 @@ contract StatusRegistry is FunctionsClient, ConfirmedOwner {
     lastError = err;
 
     emit ResponseReceived(requestId, response, err);
+
     if (response.length > 0) {
-      (uint64 time, string memory status) = abi.decode(
-        response,
-        (uint64, string)
-      );
+      Request memory request = requests[requestId];
+      if (IssuerId.unwrap(request.issuerId) == IssuerId.unwrap(INVALID_ISSUER_ID)) revert RequestNotFound(requestId);
 
-      IssuerId issuerId = issuerRequestIds[requestId];
-      if (IssuerId.unwrap(issuerId) == IssuerId.unwrap(INVALID_ISSUER_ID)) revert RequestNotFound(requestId);
+      Issuer memory issuer = issuers[request.issuerId];
+      if (bytes(issuer.url).length == 0) revert IssuerNotFound(request.issuerId);
 
-      // StatusState memory lastStatusState = issuerStatuses[issuerId];
+      if (issuer.statusMechanism == StatusMechanism.BitStatusList) {
+        (uint64 time, uint64 status) = abi.decode(
+          response,
+          (uint64, uint64)
+        );
 
-      StatusState memory newStatusState = StatusState(
-        time,
-        status
-      );
-      // check validity of status
-      // if (!checkValidity(lastStatusState, newStatusState)) revert InvalidStatus(newStatusState);
+        BSLStatus memory lastStatusState = this.getBSLStatus(request.issuerId, request.statusType);
+        BSLStatus memory newStatusState = BSLStatus(time, status);
 
-      issuerStatuses[issuerId] = newStatusState;
-      emit StatusUpdated(issuerId, newStatusState);
+        // check validity of status
+        if (!checkBSLStatusValidity(lastStatusState, newStatusState)) revert InvalidBSLStatus(requestId);
+
+        this.setBSLStatus(request.issuerId, request.statusType, newStatusState);
+        // emit StatusUpdated(request.issuerId, request.statusType);
+      } else {
+        revert UnsupportedStatusMechanism(issuer.statusMechanism);
+      }
     }
   }
 
-  function checkValidity(
-    StatusState memory lastStatusState,
-    StatusState memory newStatusState
+  function checkBSLStatusValidity(
+    BSLStatus memory lastStatusState,
+    BSLStatus memory newStatusState
   ) public pure returns (bool) {
-    return true;
+    return (lastStatusState.status & newStatusState.status) == lastStatusState.status;
   }
 }

@@ -3,6 +3,8 @@
 /* eslint-disable */
 import type * as chainlink from "./@chainlink";
 export type { chainlink };
+import type * as openzeppelin from "./@openzeppelin";
+export type { openzeppelin };
 import type * as contracts from "./contracts";
 export type { contracts };
 export * as factories from "./factories";
@@ -58,6 +60,10 @@ export type { IERC20 } from "./@chainlink/contracts/src/v0.8/vendor/openzeppelin
 export { IERC20__factory } from "./factories/@chainlink/contracts/src/v0.8/vendor/openzeppelin-solidity/v4.8.3/contracts/token/ERC20/IERC20__factory";
 export type { IERC165 } from "./@chainlink/contracts/src/v0.8/vendor/openzeppelin-solidity/v4.8.3/contracts/utils/introspection/IERC165";
 export { IERC165__factory } from "./factories/@chainlink/contracts/src/v0.8/vendor/openzeppelin-solidity/v4.8.3/contracts/utils/introspection/IERC165__factory";
+export type { SafeCast } from "./@openzeppelin/contracts/utils/math/SafeCast";
+export { SafeCast__factory } from "./factories/@openzeppelin/contracts/utils/math/SafeCast__factory";
+export type { Strings } from "./@openzeppelin/contracts/utils/Strings";
+export { Strings__factory } from "./factories/@openzeppelin/contracts/utils/Strings__factory";
 export type { AutomatedFunctionsConsumer } from "./contracts/AutomatedFunctionsConsumer";
 export { AutomatedFunctionsConsumer__factory } from "./factories/contracts/AutomatedFunctionsConsumer__factory";
 export type { ChainlinkVerifier } from "./contracts/ChainlinkVerifier.sol/ChainlinkVerifier";

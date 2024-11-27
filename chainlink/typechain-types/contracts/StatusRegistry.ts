@@ -27,35 +27,48 @@ import type {
   PromiseOrValue,
 } from "../common";
 
-export type StatusStateStruct = {
+export type BSLStatusStruct = {
   time: PromiseOrValue<BigNumberish>;
-  status: PromiseOrValue<string>;
+  status: PromiseOrValue<BigNumberish>;
 };
 
-export type StatusStateStructOutput = [BigNumber, string] & {
+export type BSLStatusStructOutput = [BigNumber, BigNumber] & {
   time: BigNumber;
-  status: string;
+  status: BigNumber;
+};
+
+export type IssuerStruct = {
+  url: PromiseOrValue<string>;
+  statusMechanism: PromiseOrValue<BigNumberish>;
+};
+
+export type IssuerStructOutput = [string, number] & {
+  url: string;
+  statusMechanism: number;
 };
 
 export interface StatusRegistryInterface extends utils.Interface {
   functions: {
     "INVALID_ISSUER_ID()": FunctionFragment;
     "acceptOwnership()": FunctionFragment;
-    "addIssuer(uint8,string)": FunctionFragment;
-    "checkValidity((uint64,string),(uint64,string))": FunctionFragment;
+    "addIssuer(uint8,string,uint8)": FunctionFragment;
+    "bslIssuanceStatuses(uint8)": FunctionFragment;
+    "bslRevocationStatuses(uint8)": FunctionFragment;
+    "checkBSLStatusValidity((uint64,uint64),(uint64,uint64))": FunctionFragment;
     "donId()": FunctionFragment;
-    "getIssuerUrl(uint8)": FunctionFragment;
+    "getBSLStatus(uint8,uint8)": FunctionFragment;
+    "getIssuer(uint8)": FunctionFragment;
     "getSource()": FunctionFragment;
     "handleOracleFulfillment(bytes32,bytes,bytes)": FunctionFragment;
-    "issuerRequestIds(bytes32)": FunctionFragment;
-    "issuerStatuses(uint8)": FunctionFragment;
-    "issuerUrls(uint8)": FunctionFragment;
+    "issuers(uint8)": FunctionFragment;
     "lastError()": FunctionFragment;
     "lastRequestId()": FunctionFragment;
     "lastResponse()": FunctionFragment;
     "owner()": FunctionFragment;
-    "requestStatus(uint8,uint64,uint32)": FunctionFragment;
+    "requestStatus(uint8,uint8,uint64,uint32)": FunctionFragment;
+    "requests(bytes32)": FunctionFragment;
     "sendRequest(string,uint8,bytes,string[],bytes[],uint64,uint32)": FunctionFragment;
+    "setBSLStatus(uint8,uint8,(uint64,uint64))": FunctionFragment;
     "setDonId(bytes32)": FunctionFragment;
     "setSource(string)": FunctionFragment;
     "source()": FunctionFragment;
@@ -67,20 +80,23 @@ export interface StatusRegistryInterface extends utils.Interface {
       | "INVALID_ISSUER_ID"
       | "acceptOwnership"
       | "addIssuer"
-      | "checkValidity"
+      | "bslIssuanceStatuses"
+      | "bslRevocationStatuses"
+      | "checkBSLStatusValidity"
       | "donId"
-      | "getIssuerUrl"
+      | "getBSLStatus"
+      | "getIssuer"
       | "getSource"
       | "handleOracleFulfillment"
-      | "issuerRequestIds"
-      | "issuerStatuses"
-      | "issuerUrls"
+      | "issuers"
       | "lastError"
       | "lastRequestId"
       | "lastResponse"
       | "owner"
       | "requestStatus"
+      | "requests"
       | "sendRequest"
+      | "setBSLStatus"
       | "setDonId"
       | "setSource"
       | "source"
@@ -97,15 +113,31 @@ export interface StatusRegistryInterface extends utils.Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "addIssuer",
-    values: [PromiseOrValue<BigNumberish>, PromiseOrValue<string>]
+    values: [
+      PromiseOrValue<BigNumberish>,
+      PromiseOrValue<string>,
+      PromiseOrValue<BigNumberish>
+    ]
   ): string;
   encodeFunctionData(
-    functionFragment: "checkValidity",
-    values: [StatusStateStruct, StatusStateStruct]
+    functionFragment: "bslIssuanceStatuses",
+    values: [PromiseOrValue<BigNumberish>]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "bslRevocationStatuses",
+    values: [PromiseOrValue<BigNumberish>]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "checkBSLStatusValidity",
+    values: [BSLStatusStruct, BSLStatusStruct]
   ): string;
   encodeFunctionData(functionFragment: "donId", values?: undefined): string;
   encodeFunctionData(
-    functionFragment: "getIssuerUrl",
+    functionFragment: "getBSLStatus",
+    values: [PromiseOrValue<BigNumberish>, PromiseOrValue<BigNumberish>]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getIssuer",
     values: [PromiseOrValue<BigNumberish>]
   ): string;
   encodeFunctionData(functionFragment: "getSource", values?: undefined): string;
@@ -118,15 +150,7 @@ export interface StatusRegistryInterface extends utils.Interface {
     ]
   ): string;
   encodeFunctionData(
-    functionFragment: "issuerRequestIds",
-    values: [PromiseOrValue<BytesLike>]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "issuerStatuses",
-    values: [PromiseOrValue<BigNumberish>]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "issuerUrls",
+    functionFragment: "issuers",
     values: [PromiseOrValue<BigNumberish>]
   ): string;
   encodeFunctionData(functionFragment: "lastError", values?: undefined): string;
@@ -144,8 +168,13 @@ export interface StatusRegistryInterface extends utils.Interface {
     values: [
       PromiseOrValue<BigNumberish>,
       PromiseOrValue<BigNumberish>,
+      PromiseOrValue<BigNumberish>,
       PromiseOrValue<BigNumberish>
     ]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "requests",
+    values: [PromiseOrValue<BytesLike>]
   ): string;
   encodeFunctionData(
     functionFragment: "sendRequest",
@@ -157,6 +186,14 @@ export interface StatusRegistryInterface extends utils.Interface {
       PromiseOrValue<BytesLike>[],
       PromiseOrValue<BigNumberish>,
       PromiseOrValue<BigNumberish>
+    ]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "setBSLStatus",
+    values: [
+      PromiseOrValue<BigNumberish>,
+      PromiseOrValue<BigNumberish>,
+      BSLStatusStruct
     ]
   ): string;
   encodeFunctionData(
@@ -183,28 +220,29 @@ export interface StatusRegistryInterface extends utils.Interface {
   ): Result;
   decodeFunctionResult(functionFragment: "addIssuer", data: BytesLike): Result;
   decodeFunctionResult(
-    functionFragment: "checkValidity",
+    functionFragment: "bslIssuanceStatuses",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "bslRevocationStatuses",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "checkBSLStatusValidity",
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "donId", data: BytesLike): Result;
   decodeFunctionResult(
-    functionFragment: "getIssuerUrl",
+    functionFragment: "getBSLStatus",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "getIssuer", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "getSource", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "handleOracleFulfillment",
     data: BytesLike
   ): Result;
-  decodeFunctionResult(
-    functionFragment: "issuerRequestIds",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "issuerStatuses",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(functionFragment: "issuerUrls", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "issuers", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "lastError", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "lastRequestId",
@@ -219,8 +257,13 @@ export interface StatusRegistryInterface extends utils.Interface {
     functionFragment: "requestStatus",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "requests", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "sendRequest",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "setBSLStatus",
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "setDonId", data: BytesLike): Result;
@@ -237,7 +280,7 @@ export interface StatusRegistryInterface extends utils.Interface {
     "RequestFulfilled(bytes32)": EventFragment;
     "RequestSent(bytes32)": EventFragment;
     "ResponseReceived(bytes32,bytes,bytes)": EventFragment;
-    "StatusUpdated(uint8,tuple)": EventFragment;
+    "StatusUpdated(uint8,uint8)": EventFragment;
   };
 
   getEvent(nameOrSignatureOrTopic: "OwnershipTransferRequested"): EventFragment;
@@ -305,10 +348,10 @@ export type ResponseReceivedEventFilter =
 
 export interface StatusUpdatedEventObject {
   issuerId: number;
-  status: StatusStateStructOutput;
+  statusType: number;
 }
 export type StatusUpdatedEvent = TypedEvent<
-  [number, StatusStateStructOutput],
+  [number, number],
   StatusUpdatedEventObject
 >;
 
@@ -350,21 +393,38 @@ export interface StatusRegistry extends BaseContract {
     addIssuer(
       issuerId: PromiseOrValue<BigNumberish>,
       url: PromiseOrValue<string>,
+      statusMechanism: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
 
-    checkValidity(
-      lastStatusState: StatusStateStruct,
-      newStatusState: StatusStateStruct,
+    bslIssuanceStatuses(
+      arg0: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<[BigNumber, BigNumber] & { time: BigNumber; status: BigNumber }>;
+
+    bslRevocationStatuses(
+      arg0: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<[BigNumber, BigNumber] & { time: BigNumber; status: BigNumber }>;
+
+    checkBSLStatusValidity(
+      lastStatusState: BSLStatusStruct,
+      newStatusState: BSLStatusStruct,
       overrides?: CallOverrides
     ): Promise<[boolean]>;
 
     donId(overrides?: CallOverrides): Promise<[string]>;
 
-    getIssuerUrl(
+    getBSLStatus(
+      issuerId: PromiseOrValue<BigNumberish>,
+      statusType: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<[BSLStatusStructOutput]>;
+
+    getIssuer(
       issuerId: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
-    ): Promise<[string]>;
+    ): Promise<[IssuerStructOutput]>;
 
     getSource(overrides?: CallOverrides): Promise<[string]>;
 
@@ -375,20 +435,10 @@ export interface StatusRegistry extends BaseContract {
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
 
-    issuerRequestIds(
-      arg0: PromiseOrValue<BytesLike>,
-      overrides?: CallOverrides
-    ): Promise<[number]>;
-
-    issuerStatuses(
+    issuers(
       arg0: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
-    ): Promise<[BigNumber, string] & { time: BigNumber; status: string }>;
-
-    issuerUrls(
-      arg0: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<[string]>;
+    ): Promise<[string, number] & { url: string; statusMechanism: number }>;
 
     lastError(overrides?: CallOverrides): Promise<[string]>;
 
@@ -400,10 +450,22 @@ export interface StatusRegistry extends BaseContract {
 
     requestStatus(
       issuerId: PromiseOrValue<BigNumberish>,
+      statusType: PromiseOrValue<BigNumberish>,
       subscriptionId: PromiseOrValue<BigNumberish>,
       callbackGasLimit: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
+
+    requests(
+      arg0: PromiseOrValue<BytesLike>,
+      overrides?: CallOverrides
+    ): Promise<
+      [number, number, number] & {
+        issuerId: number;
+        statusType: number;
+        statusMechanism: number;
+      }
+    >;
 
     sendRequest(
       _source: PromiseOrValue<string>,
@@ -413,6 +475,13 @@ export interface StatusRegistry extends BaseContract {
       bytesArgs: PromiseOrValue<BytesLike>[],
       subscriptionId: PromiseOrValue<BigNumberish>,
       callbackGasLimit: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
+
+    setBSLStatus(
+      issuerId: PromiseOrValue<BigNumberish>,
+      statusType: PromiseOrValue<BigNumberish>,
+      status: BSLStatusStruct,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
 
@@ -443,21 +512,38 @@ export interface StatusRegistry extends BaseContract {
   addIssuer(
     issuerId: PromiseOrValue<BigNumberish>,
     url: PromiseOrValue<string>,
+    statusMechanism: PromiseOrValue<BigNumberish>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
-  checkValidity(
-    lastStatusState: StatusStateStruct,
-    newStatusState: StatusStateStruct,
+  bslIssuanceStatuses(
+    arg0: PromiseOrValue<BigNumberish>,
+    overrides?: CallOverrides
+  ): Promise<[BigNumber, BigNumber] & { time: BigNumber; status: BigNumber }>;
+
+  bslRevocationStatuses(
+    arg0: PromiseOrValue<BigNumberish>,
+    overrides?: CallOverrides
+  ): Promise<[BigNumber, BigNumber] & { time: BigNumber; status: BigNumber }>;
+
+  checkBSLStatusValidity(
+    lastStatusState: BSLStatusStruct,
+    newStatusState: BSLStatusStruct,
     overrides?: CallOverrides
   ): Promise<boolean>;
 
   donId(overrides?: CallOverrides): Promise<string>;
 
-  getIssuerUrl(
+  getBSLStatus(
+    issuerId: PromiseOrValue<BigNumberish>,
+    statusType: PromiseOrValue<BigNumberish>,
+    overrides?: CallOverrides
+  ): Promise<BSLStatusStructOutput>;
+
+  getIssuer(
     issuerId: PromiseOrValue<BigNumberish>,
     overrides?: CallOverrides
-  ): Promise<string>;
+  ): Promise<IssuerStructOutput>;
 
   getSource(overrides?: CallOverrides): Promise<string>;
 
@@ -468,20 +554,10 @@ export interface StatusRegistry extends BaseContract {
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
-  issuerRequestIds(
-    arg0: PromiseOrValue<BytesLike>,
-    overrides?: CallOverrides
-  ): Promise<number>;
-
-  issuerStatuses(
+  issuers(
     arg0: PromiseOrValue<BigNumberish>,
     overrides?: CallOverrides
-  ): Promise<[BigNumber, string] & { time: BigNumber; status: string }>;
-
-  issuerUrls(
-    arg0: PromiseOrValue<BigNumberish>,
-    overrides?: CallOverrides
-  ): Promise<string>;
+  ): Promise<[string, number] & { url: string; statusMechanism: number }>;
 
   lastError(overrides?: CallOverrides): Promise<string>;
 
@@ -493,10 +569,22 @@ export interface StatusRegistry extends BaseContract {
 
   requestStatus(
     issuerId: PromiseOrValue<BigNumberish>,
+    statusType: PromiseOrValue<BigNumberish>,
     subscriptionId: PromiseOrValue<BigNumberish>,
     callbackGasLimit: PromiseOrValue<BigNumberish>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
+
+  requests(
+    arg0: PromiseOrValue<BytesLike>,
+    overrides?: CallOverrides
+  ): Promise<
+    [number, number, number] & {
+      issuerId: number;
+      statusType: number;
+      statusMechanism: number;
+    }
+  >;
 
   sendRequest(
     _source: PromiseOrValue<string>,
@@ -506,6 +594,13 @@ export interface StatusRegistry extends BaseContract {
     bytesArgs: PromiseOrValue<BytesLike>[],
     subscriptionId: PromiseOrValue<BigNumberish>,
     callbackGasLimit: PromiseOrValue<BigNumberish>,
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
+  setBSLStatus(
+    issuerId: PromiseOrValue<BigNumberish>,
+    statusType: PromiseOrValue<BigNumberish>,
+    status: BSLStatusStruct,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
@@ -534,21 +629,38 @@ export interface StatusRegistry extends BaseContract {
     addIssuer(
       issuerId: PromiseOrValue<BigNumberish>,
       url: PromiseOrValue<string>,
+      statusMechanism: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
     ): Promise<void>;
 
-    checkValidity(
-      lastStatusState: StatusStateStruct,
-      newStatusState: StatusStateStruct,
+    bslIssuanceStatuses(
+      arg0: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<[BigNumber, BigNumber] & { time: BigNumber; status: BigNumber }>;
+
+    bslRevocationStatuses(
+      arg0: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<[BigNumber, BigNumber] & { time: BigNumber; status: BigNumber }>;
+
+    checkBSLStatusValidity(
+      lastStatusState: BSLStatusStruct,
+      newStatusState: BSLStatusStruct,
       overrides?: CallOverrides
     ): Promise<boolean>;
 
     donId(overrides?: CallOverrides): Promise<string>;
 
-    getIssuerUrl(
+    getBSLStatus(
+      issuerId: PromiseOrValue<BigNumberish>,
+      statusType: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<BSLStatusStructOutput>;
+
+    getIssuer(
       issuerId: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
-    ): Promise<string>;
+    ): Promise<IssuerStructOutput>;
 
     getSource(overrides?: CallOverrides): Promise<string>;
 
@@ -559,20 +671,10 @@ export interface StatusRegistry extends BaseContract {
       overrides?: CallOverrides
     ): Promise<void>;
 
-    issuerRequestIds(
-      arg0: PromiseOrValue<BytesLike>,
-      overrides?: CallOverrides
-    ): Promise<number>;
-
-    issuerStatuses(
+    issuers(
       arg0: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
-    ): Promise<[BigNumber, string] & { time: BigNumber; status: string }>;
-
-    issuerUrls(
-      arg0: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<string>;
+    ): Promise<[string, number] & { url: string; statusMechanism: number }>;
 
     lastError(overrides?: CallOverrides): Promise<string>;
 
@@ -584,10 +686,22 @@ export interface StatusRegistry extends BaseContract {
 
     requestStatus(
       issuerId: PromiseOrValue<BigNumberish>,
+      statusType: PromiseOrValue<BigNumberish>,
       subscriptionId: PromiseOrValue<BigNumberish>,
       callbackGasLimit: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
     ): Promise<void>;
+
+    requests(
+      arg0: PromiseOrValue<BytesLike>,
+      overrides?: CallOverrides
+    ): Promise<
+      [number, number, number] & {
+        issuerId: number;
+        statusType: number;
+        statusMechanism: number;
+      }
+    >;
 
     sendRequest(
       _source: PromiseOrValue<string>,
@@ -599,6 +713,13 @@ export interface StatusRegistry extends BaseContract {
       callbackGasLimit: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
     ): Promise<string>;
+
+    setBSLStatus(
+      issuerId: PromiseOrValue<BigNumberish>,
+      statusType: PromiseOrValue<BigNumberish>,
+      status: BSLStatusStruct,
+      overrides?: CallOverrides
+    ): Promise<void>;
 
     setDonId(
       newDonId: PromiseOrValue<BytesLike>,
@@ -660,11 +781,11 @@ export interface StatusRegistry extends BaseContract {
       error?: null
     ): ResponseReceivedEventFilter;
 
-    "StatusUpdated(uint8,tuple)"(
+    "StatusUpdated(uint8,uint8)"(
       issuerId?: null,
-      status?: null
+      statusType?: null
     ): StatusUpdatedEventFilter;
-    StatusUpdated(issuerId?: null, status?: null): StatusUpdatedEventFilter;
+    StatusUpdated(issuerId?: null, statusType?: null): StatusUpdatedEventFilter;
   };
 
   estimateGas: {
@@ -677,18 +798,35 @@ export interface StatusRegistry extends BaseContract {
     addIssuer(
       issuerId: PromiseOrValue<BigNumberish>,
       url: PromiseOrValue<string>,
+      statusMechanism: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
-    checkValidity(
-      lastStatusState: StatusStateStruct,
-      newStatusState: StatusStateStruct,
+    bslIssuanceStatuses(
+      arg0: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    bslRevocationStatuses(
+      arg0: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    checkBSLStatusValidity(
+      lastStatusState: BSLStatusStruct,
+      newStatusState: BSLStatusStruct,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
     donId(overrides?: CallOverrides): Promise<BigNumber>;
 
-    getIssuerUrl(
+    getBSLStatus(
+      issuerId: PromiseOrValue<BigNumberish>,
+      statusType: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    getIssuer(
       issuerId: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
@@ -702,17 +840,7 @@ export interface StatusRegistry extends BaseContract {
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
-    issuerRequestIds(
-      arg0: PromiseOrValue<BytesLike>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
-
-    issuerStatuses(
-      arg0: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
-
-    issuerUrls(
+    issuers(
       arg0: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
@@ -727,9 +855,15 @@ export interface StatusRegistry extends BaseContract {
 
     requestStatus(
       issuerId: PromiseOrValue<BigNumberish>,
+      statusType: PromiseOrValue<BigNumberish>,
       subscriptionId: PromiseOrValue<BigNumberish>,
       callbackGasLimit: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
+    requests(
+      arg0: PromiseOrValue<BytesLike>,
+      overrides?: CallOverrides
     ): Promise<BigNumber>;
 
     sendRequest(
@@ -740,6 +874,13 @@ export interface StatusRegistry extends BaseContract {
       bytesArgs: PromiseOrValue<BytesLike>[],
       subscriptionId: PromiseOrValue<BigNumberish>,
       callbackGasLimit: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
+    setBSLStatus(
+      issuerId: PromiseOrValue<BigNumberish>,
+      statusType: PromiseOrValue<BigNumberish>,
+      status: BSLStatusStruct,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
@@ -771,18 +912,35 @@ export interface StatusRegistry extends BaseContract {
     addIssuer(
       issuerId: PromiseOrValue<BigNumberish>,
       url: PromiseOrValue<string>,
+      statusMechanism: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 
-    checkValidity(
-      lastStatusState: StatusStateStruct,
-      newStatusState: StatusStateStruct,
+    bslIssuanceStatuses(
+      arg0: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    bslRevocationStatuses(
+      arg0: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    checkBSLStatusValidity(
+      lastStatusState: BSLStatusStruct,
+      newStatusState: BSLStatusStruct,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
     donId(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
-    getIssuerUrl(
+    getBSLStatus(
+      issuerId: PromiseOrValue<BigNumberish>,
+      statusType: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    getIssuer(
       issuerId: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
@@ -796,17 +954,7 @@ export interface StatusRegistry extends BaseContract {
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 
-    issuerRequestIds(
-      arg0: PromiseOrValue<BytesLike>,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
-    issuerStatuses(
-      arg0: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
-    issuerUrls(
+    issuers(
       arg0: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
@@ -821,9 +969,15 @@ export interface StatusRegistry extends BaseContract {
 
     requestStatus(
       issuerId: PromiseOrValue<BigNumberish>,
+      statusType: PromiseOrValue<BigNumberish>,
       subscriptionId: PromiseOrValue<BigNumberish>,
       callbackGasLimit: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    requests(
+      arg0: PromiseOrValue<BytesLike>,
+      overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
     sendRequest(
@@ -834,6 +988,13 @@ export interface StatusRegistry extends BaseContract {
       bytesArgs: PromiseOrValue<BytesLike>[],
       subscriptionId: PromiseOrValue<BigNumberish>,
       callbackGasLimit: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    setBSLStatus(
+      issuerId: PromiseOrValue<BigNumberish>,
+      statusType: PromiseOrValue<BigNumberish>,
+      status: BSLStatusStruct,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 

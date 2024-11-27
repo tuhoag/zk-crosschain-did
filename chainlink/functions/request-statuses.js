@@ -3,23 +3,40 @@ const ethers = await import("npm:ethers@6.10.0");
 const { Buffer } = await import("node:buffer")
 
 const domain = args[0];
-const lastStatus = args[1];
+const lastDecodedStatus = args[1];
 const lastStatusTime = args[2];
+const statusType = args[3];
+const statusMechanism = args[4];
 
 console.log(`domain: ${domain}`);
-console.log(`lastStatus: ${lastStatus}`);
+console.log(`lastDecodedStatus: ${lastDecodedStatus}`);
 console.log(`lastStatusTime: ${lastStatusTime}`);
+console.log(`statusType: ${statusType}`);
+console.log(`statusMechanism: ${statusMechanism}`);
 
-let decodedLastStatus;
-if (lastStatus == "") {
-    decodedLastStatus = 0;
+let decodedLastStatus = BigInt(lastDecodedStatus);
+
+let statusMechanismIndex;
+if (statusMechanism == 0) {
+    statusMechanismIndex = "bsl";
+} else if (statusMechanism == 1) {
+    statusMechanismIndex = "mt";
 } else {
-    decodedLastStatus = Buffer.from(lastStatus, 'base64').readBigInt64BE(0);
+    throw new Error(`Invalid status mechanism: ${statusMechanism}`);
+}
+
+let statusTypeIndex;
+if (statusType == 1) {
+    statusTypeIndex = "issuance";
+} else if (statusType == 2) {
+    statusTypeIndex = "revocation";
+} else {
+    throw new Error(`Invalid status type: ${statusType}`);
 }
 
 // Use multiple APIs & aggregate the results to enhance decentralization
 let urls = [
-    `${domain}/statuses/bsl/issuance?time=${lastStatusTime}`,
+    `${domain}/statuses/${statusMechanismIndex}/${statusTypeIndex}?time=${lastStatusTime}`,
     // `${domain}/statuses/bsl/issuance?time=${lastStatusTime}`,
 ];
 
@@ -106,7 +123,7 @@ if (statuses.length == 0) {
 
     // ABI encoding
     console.log(validStatuses[maxIndex][maxLen - 1]);
-    const { time, status_mechanism, status_type, status } = validStatuses[maxIndex][maxLen - 1];
+    const { time, status_mechanism, status_type, decodedStatus } = validStatuses[maxIndex][maxLen - 1];
 
     let status_mechanism_index = 0;
     if (status_mechanism == "bsl") {
@@ -126,8 +143,8 @@ if (statuses.length == 0) {
 
     const abiCoder = ethers.AbiCoder.defaultAbiCoder();
     const encoded = abiCoder.encode(
-        ["uint64", "string"],
-        [ time, status ]
+        ["uint64", "uint64"],
+        [ time, decodedStatus ]
     );
     const bytes = ethers.getBytes(encoded);
     console.log(`returned ${bytes.length} bytes`);

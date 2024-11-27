@@ -14,7 +14,7 @@ const requestConfig = {
   // Optional if secrets are expected in the sourceLocation of secrets (only Remote or DONHosted is supported)
   // secretsLocation: Location.DONHosted,
   // Args (string only array) can be accessed within the source code with `args[index]` (ie: args[0]).
-  args: ["http://localhost:3000", "", "0"],
+  args: ["http://localhost:3000", "0", "0", "1", "1"],
   // Code language (only JavaScript is currently supported)
   codeLanguage: CodeLanguage.JavaScript,
   // Expected type of the returned value
