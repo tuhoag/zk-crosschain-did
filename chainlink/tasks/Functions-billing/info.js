@@ -18,7 +18,10 @@ task(
 
     const subInfo = await sm.getSubscriptionInfo(subscriptionId)
     // parse balances into LINK for readability
-    subInfo.balance = ethers.utils.formatEther(subInfo.balance) + " LINK"
+    subInfo.formattedBalance = ethers.utils.formatEther(subInfo.balance)
+    subInfo.balanceStr = ethers.utils.formatEther(subInfo.balance) + " LINK"
     subInfo.blockedBalance = ethers.utils.formatEther(subInfo.blockedBalance) + " LINK"
     console.log(`\nInfo for subscription ${subscriptionId}:\n`, subInfo)
+
+    return subInfo
   })

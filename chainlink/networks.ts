@@ -5,7 +5,8 @@
 // Chain IDs: https://chainlist.org/?testnets=true
 
 // Loads environment variables from .env.enc file (if it exists)
-require("@chainlink/env-enc").config()
+import { config } from "@chainlink/env-enc";
+config();
 
 const DEFAULT_VERIFICATION_BLOCK_CONFIRMATIONS = 2
 
@@ -267,16 +268,14 @@ const networks = {
   },
   // localFunctionsTestnet is updated dynamically by scripts/startLocalFunctionsTestnet.js so it should not be modified here
   localFunctionsTestnet: {
-      url: "http://localhost:8545/",
-      accounts,
-      confirmations: 1,
-      nativeCurrencySymbol: "ETH",
-      linkToken: "0xF106E746816Eac47A1c0c6139045f0E2Edb2dcB5",
-      functionsRouter: "0xBeD79e061c937b206560c3c520003f463cD6E5F0",
-      donId: "local-functions-testnet",
-    },
+    url: "http://localhost:8545/",
+    accounts,
+    confirmations: 1,
+    nativeCurrencySymbol: "ETH",
+    linkToken: "0x069eE2Ec6aba43CF3B9aF2d1bF1b04c5E8626d35",
+    functionsRouter: "0x75Fff35851F630834C21Db74d2059a5356b9C1ee",
+    donId: "local-functions-testnet",
+  },
 }
 
-module.exports = {
-  networks,
-}
+export default { networks };

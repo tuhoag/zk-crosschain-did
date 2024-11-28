@@ -5,6 +5,7 @@ import { Location } from "@chainlink/functions-toolkit";
 // import config from "../Functions-request-config";
 import { ResponseListener } from "@chainlink/functions-toolkit";
 import { Contract } from "ethers";
+import { get } from "http";
 
 async function callSendRequest(consumerContract: Contract, subscriptionId: number) {
     const source = await consumerContract.getSource();
@@ -32,7 +33,8 @@ async function callRequestStatus(consumerContract: Contract, subscriptionId: num
         { gasLimit: 1_750_000 }
     );
     console.log("requestStatus called");
-    await requestTx.wait(1);
+    const receipt = await requestTx.wait(1);
+    console.log(`Gas used: ${receipt.gasUsed.toString()}`);
 
     const filter = consumerContract.filters.ResponseReceived();
 
@@ -52,13 +54,61 @@ async function initContract(consumerContract: Contract) {
     await consumerContract.addIssuer(1, "http://localhost:3000", 0);
 }
 
-async function main() {
-    const consumerContract = await run("functions-deploy-consumer", { name: "StatusRegistry", verify: true });
-    const subscriptionId = await run("functions-sub-create", { amount: "2", contract: consumerContract.address });
+async function printBalance(subscriptionId: number) {
+    await run("functions-sub-info", { subid: subscriptionId.toString() });
+}
 
-    await initContract(consumerContract);
-    // await callSendRequest(consumerContract, subscriptionId);
-    await callRequestStatus(consumerContract, subscriptionId);
+function getConsumerDeploymentOverrides(): { gasPrice?: number, nonce?: number } {
+    const overrides = {};
+
+    console.log(hre.networks);
+
+    // If specified, use the gas price from the network config instead of Ethers estimated price
+    // if (networks[network.name].gasPrice) {
+    //   overrides.gasPrice = networks[network.name].gasPrice
+    // }
+    // // If specified, use the nonce from the network config instead of automatically calculating it
+    // if (networks[network.name].nonce) {
+    //   overrides.nonce = networks[network.name].nonce
+    // }
+
+    return overrides;
+}
+async function deployContracts() {
+    const StatusLibrary = await ethers.getContractFactory("StatusState");
+    const library = await StatusLibrary.deploy();
+
+    console.log(`Deployed StatusLibrary at ${library.address}`);
+
+    // const consumerContract = await consumerContractFactory.deploy(functionsRouter, donIdBytes32, overrides)
+
+    const StatusRegistryContract = await ethers.getContractFactory("StatusRegistry", {
+        libraries: {
+            StatusState: library.address,
+        },
+    });
+
+    getConsumerDeploymentOverrides();
+
+    // const statusRegistryContract = await StatusRegistryContract.deploy(functionsRouter, donIdBytes32);
+    // console.log(`Deployed StatusRegistry at ${statusRegistryContract.address}`);
+
+    return {
+
+    }
+}
+async function main() {
+    const consumerContract = await deployContracts();
+
+    // const subscriptionId = await run("functions-sub-create", { amount: "2", contract: consumerContract.address });
+
+    // await initContract(consumerContract);
+    // // await callSendRequest(consumerContract, subscriptionId);
+
+    // const beforeInfo = await run("functions-sub-info", { subid: subscriptionId.toString() });
+    // await callRequestStatus(consumerContract, subscriptionId);
+    // const afterInfo = await run("functions-sub-info", { subid: subscriptionId.toString() });
+    // console.log(`cost: ${beforeInfo.formattedBalance - afterInfo.formattedBalance} LINK`);
 }
 
 main()

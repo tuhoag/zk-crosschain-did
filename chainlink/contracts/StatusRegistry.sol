@@ -5,60 +5,30 @@ import {FunctionsClient} from "@chainlink/contracts/src/v0.8/functions/v1_0_0/Fu
 import {ConfirmedOwner} from "@chainlink/contracts/src/v0.8/shared/access/ConfirmedOwner.sol";
 import {FunctionsRequest} from "@chainlink/contracts/src/v0.8/functions/v1_0_0/libraries/FunctionsRequest.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
-
-enum StatusType {
-  Invalid,
-  Issuance,
-  Revocation
-}
-
-enum StatusMechanism {
-  BitStatusList,
-  MerkleTree
-}
-
-struct StatusState {
-  uint64 time;
-  string status;
-  // StatusMechanism statusMechanism;
-  // StatusType statusType;
-}
-
-type IssuerId is uint8;
-
-struct Issuer {
-  string url;
-  StatusMechanism statusMechanism;
-}
-
-struct Request {
-  IssuerId issuerId;
-  StatusType statusType;
-  StatusMechanism statusMechanism;
-}
-
-struct BSLStatus {
-  uint64 time;
-  uint64 status;
-}
-
+import {StatusState} from "./utils/StatusState.sol";
 /**
  * @title Chainlink Functions example on-demand consumer contract example
  */
 contract StatusRegistry is FunctionsClient, ConfirmedOwner {
   using FunctionsRequest for FunctionsRequest.Request;
+  // using StatusState for IssuerId;
+  struct Request {
+    StatusState.IssuerId issuerId;
+    StatusState.StatusType statusType;
+    StatusState.StatusMechanism statusMechanism;
+  }
 
-  IssuerId public constant INVALID_ISSUER_ID = IssuerId.wrap(0);
+  StatusState.IssuerId public constant INVALID_ISSUER_ID = StatusState.IssuerId.wrap(0);
 
-  error IssuerNotFound(IssuerId issuerId);
+  error IssuerNotFound(StatusState.IssuerId issuerId);
   error RequestNotFound(bytes32 requestId);
   error InvalidBSLStatus(bytes32 requestId);
-  error InvalidIssuerId(IssuerId issuerId);
-  error InvalidStatusType(StatusType statusType);
+  error InvalidIssuerId(StatusState.IssuerId issuerId);
+  error InvalidStatusType(StatusState.StatusType statusType);
   error EmptySource();
-  error UnsupportedStatusMechanism(StatusMechanism);
+  error UnsupportedStatusMechanism(StatusState.StatusMechanism);
 
-  event StatusUpdated(IssuerId issuerId, StatusType statusType);
+  event StatusUpdated(StatusState.IssuerId issuerId, StatusState.StatusType statusType);
   event ResponseReceived(bytes32 requestId, bytes response, bytes error);
 
   bytes32 public donId; // DON ID for the Functions DON to which the requests are sent
@@ -68,9 +38,9 @@ contract StatusRegistry is FunctionsClient, ConfirmedOwner {
   string public source;
 
   mapping(bytes32 => Request) public requests;
-  mapping(IssuerId => Issuer) public issuers;
-  mapping(IssuerId => BSLStatus) public bslIssuanceStatuses;
-  mapping(IssuerId => BSLStatus) public bslRevocationStatuses;
+  mapping(StatusState.IssuerId => StatusState.Issuer) public issuers;
+  mapping(StatusState.IssuerId => StatusState.BSLStatus) public bslIssuanceStatuses;
+  mapping(StatusState.IssuerId => StatusState.BSLStatus) public bslRevocationStatuses;
 
   constructor(address router, bytes32 _donId) FunctionsClient(router) ConfirmedOwner(msg.sender) {
     donId = _donId;
@@ -84,8 +54,8 @@ contract StatusRegistry is FunctionsClient, ConfirmedOwner {
     donId = newDonId;
   }
 
-  function getIssuer(IssuerId issuerId) external view returns (Issuer memory) {
-    Issuer memory issuer = issuers[issuerId];
+  function getIssuer(StatusState.IssuerId issuerId) external view returns (StatusState.Issuer memory) {
+    StatusState.Issuer memory issuer = issuers[issuerId];
     if (bytes(issuer.url).length == 0) revert IssuerNotFound(issuerId);
     return issuer;
   }
@@ -99,29 +69,29 @@ contract StatusRegistry is FunctionsClient, ConfirmedOwner {
     source = _source;
   }
 
-  function addIssuer(IssuerId issuerId, string calldata url, StatusMechanism statusMechanism) external {
-    if (IssuerId.unwrap(issuerId) == IssuerId.unwrap(INVALID_ISSUER_ID)) revert InvalidIssuerId(issuerId);
-    issuers[issuerId] = Issuer(url, statusMechanism);
+  function addIssuer(StatusState.IssuerId issuerId, string calldata url, StatusState.StatusMechanism statusMechanism) external {
+    if (StatusState.IssuerId.unwrap(issuerId) == StatusState.IssuerId.unwrap(INVALID_ISSUER_ID)) revert InvalidIssuerId(issuerId);
+    issuers[issuerId] = StatusState.Issuer(url, statusMechanism);
   }
 
-  function getBSLStatus(IssuerId issuerId, StatusType statusType) external view returns (BSLStatus memory) {
-    if (IssuerId.unwrap(issuerId) == IssuerId.unwrap(INVALID_ISSUER_ID)) revert InvalidIssuerId(issuerId);
+  function getBSLStatus(StatusState.IssuerId issuerId, StatusState.StatusType statusType) external view returns (StatusState.BSLStatus memory) {
+    if (StatusState.IssuerId.unwrap(issuerId) == StatusState.IssuerId.unwrap(INVALID_ISSUER_ID)) revert InvalidIssuerId(issuerId);
 
-    if (statusType == StatusType.Issuance) {
+    if (statusType == StatusState.StatusType.Issuance) {
       return bslIssuanceStatuses[issuerId];
-    } else if (statusType == StatusType.Revocation) {
+    } else if (statusType == StatusState.StatusType.Revocation) {
       return bslRevocationStatuses[issuerId];
     } else {
       revert InvalidStatusType(statusType);
     }
   }
 
-  function setBSLStatus(IssuerId issuerId, StatusType statusType, BSLStatus memory status) external {
-    if (IssuerId.unwrap(issuerId) == IssuerId.unwrap(INVALID_ISSUER_ID)) revert InvalidIssuerId(issuerId);
+  function setBSLStatus(StatusState.IssuerId issuerId, StatusState.StatusType statusType, StatusState.BSLStatus memory status) external {
+    if (StatusState.IssuerId.unwrap(issuerId) == StatusState.IssuerId.unwrap(INVALID_ISSUER_ID)) revert InvalidIssuerId(issuerId);
 
-    if (statusType == StatusType.Issuance) {
+    if (statusType == StatusState.StatusType.Issuance) {
       bslIssuanceStatuses[issuerId] = status;
-    } else if (statusType == StatusType.Revocation) {
+    } else if (statusType == StatusState.StatusType.Revocation) {
       bslRevocationStatuses[issuerId] = status;
     } else {
       revert InvalidStatusType(statusType);
@@ -134,27 +104,23 @@ contract StatusRegistry is FunctionsClient, ConfirmedOwner {
    * @param callbackGasLimit Maximum amount of gas used to call the inherited `handleOracleFulfillment` method
    */
   function requestStatus(
-    IssuerId issuerId,
-    // string calldata source,
-    // FunctionsRequest.Location secretsLocation,
-    // bytes calldata encryptedSecretsReference,
-    // string[] calldata args,
-    StatusType statusType,
+    StatusState.IssuerId issuerId,
+    StatusState.StatusType statusType,
     uint64 subscriptionId,
     uint32 callbackGasLimit
   ) external {
     if (bytes(source).length == 0) revert EmptySource();
-    if (statusType == StatusType.Invalid) revert InvalidStatusType(statusType);
+    if (statusType == StatusState.StatusType.Invalid) revert InvalidStatusType(statusType);
 
     // get issuer URL
-    Issuer memory issuer = issuers[issuerId];
+    StatusState.Issuer memory issuer = issuers[issuerId];
     if (bytes(issuer.url).length == 0) revert IssuerNotFound(issuerId);
 
     string[] memory args = new string[](5);
     args[0] = issuer.url;
 
-    if (issuer.statusMechanism == StatusMechanism.BitStatusList) {
-      BSLStatus memory lastStatusState = this.getBSLStatus(issuerId, statusType);
+    if (issuer.statusMechanism == StatusState.StatusMechanism.BitStatusList) {
+      StatusState.BSLStatus memory lastStatusState = this.getBSLStatus(issuerId, statusType);
       args[1] = Strings.toString(lastStatusState.status);
       args[2] = Strings.toString(lastStatusState.time);
     } else {
@@ -217,22 +183,22 @@ contract StatusRegistry is FunctionsClient, ConfirmedOwner {
 
     if (response.length > 0) {
       Request memory request = requests[requestId];
-      if (IssuerId.unwrap(request.issuerId) == IssuerId.unwrap(INVALID_ISSUER_ID)) revert RequestNotFound(requestId);
+      if (StatusState.IssuerId.unwrap(request.issuerId) == StatusState.IssuerId.unwrap(INVALID_ISSUER_ID)) revert RequestNotFound(requestId);
 
-      Issuer memory issuer = issuers[request.issuerId];
+      StatusState.Issuer memory issuer = issuers[request.issuerId];
       if (bytes(issuer.url).length == 0) revert IssuerNotFound(request.issuerId);
 
-      if (issuer.statusMechanism == StatusMechanism.BitStatusList) {
+      if (issuer.statusMechanism == StatusState.StatusMechanism.BitStatusList) {
         (uint64 time, uint64 status) = abi.decode(
           response,
           (uint64, uint64)
         );
 
-        BSLStatus memory lastStatusState = this.getBSLStatus(request.issuerId, request.statusType);
-        BSLStatus memory newStatusState = BSLStatus(time, status);
+        StatusState.BSLStatus memory lastStatusState = this.getBSLStatus(request.issuerId, request.statusType);
+        StatusState.BSLStatus memory newStatusState = StatusState.BSLStatus(time, status);
 
         // check validity of status
-        if (!checkBSLStatusValidity(lastStatusState, newStatusState)) revert InvalidBSLStatus(requestId);
+        if (!StatusState.checkBSLStatusValidity(lastStatusState, newStatusState)) revert InvalidBSLStatus(requestId);
 
         this.setBSLStatus(request.issuerId, request.statusType, newStatusState);
         // emit StatusUpdated(request.issuerId, request.statusType);
@@ -240,12 +206,5 @@ contract StatusRegistry is FunctionsClient, ConfirmedOwner {
         revert UnsupportedStatusMechanism(issuer.statusMechanism);
       }
     }
-  }
-
-  function checkBSLStatusValidity(
-    BSLStatus memory lastStatusState,
-    BSLStatus memory newStatusState
-  ) public pure returns (bool) {
-    return (lastStatusState.status & newStatusState.status) == lastStatusState.status;
   }
 }

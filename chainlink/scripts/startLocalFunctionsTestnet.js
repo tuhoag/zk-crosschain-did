@@ -41,17 +41,20 @@ require("@chainlink/env-enc").config("../.env.enc")
   }
 
   // Update values in networks.js
-  let networksConfig = fs.readFileSync(path.join(process.cwd(), "networks.js")).toString()
-  const regex = /localFunctionsTestnet:\s*{\s*([^{}]*)\s*}/s
-  const newContent = `localFunctionsTestnet: {
-    url: "http://localhost:8545/",
-    accounts,
-    confirmations: 1,
-    nativeCurrencySymbol: "ETH",
-    linkToken: "${localFunctionsTestnetInfo.linkTokenContract.address}",
-    functionsRouter: "${localFunctionsTestnetInfo.functionsRouterContract.address}",
-    donId: "${localFunctionsTestnetInfo.donId}",
-  }`
-  networksConfig = networksConfig.replace(regex, newContent)
-  fs.writeFileSync(path.join(process.cwd(), "networks.js"), networksConfig)
+  for (const fileName of ["networks.js", "networks.ts"]) {
+    let networksConfig = fs.readFileSync(path.join(process.cwd(), fileName)).toString()
+    const regex = /localFunctionsTestnet:\s*{\s*([^{}]*)\s*}/s
+    const newContent = `localFunctionsTestnet: {
+      url: "http://localhost:8545/",
+      accounts,
+      confirmations: 1,
+      nativeCurrencySymbol: "ETH",
+      linkToken: "${localFunctionsTestnetInfo.linkTokenContract.address}",
+      functionsRouter: "${localFunctionsTestnetInfo.functionsRouterContract.address}",
+      donId: "${localFunctionsTestnetInfo.donId}",
+    }`
+    networksConfig = networksConfig.replace(regex, newContent)
+    fs.writeFileSync(path.join(process.cwd(), "networks.js"), networksConfig)
+  }
+
 })()
