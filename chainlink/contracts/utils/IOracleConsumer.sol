@@ -3,19 +3,13 @@ pragma solidity ^0.8.20;
 
 import {StatusState} from "./StatusState.sol";
 
-interface IStatusRegistry {
-  function requestStatus(
+interface IOracleConsumer {
+  function requestBSLStatus(
     address requesterAddress,
-    StatusState.IssuerId issuerId,
+    string memory url,
+    StatusState.BSLStatus memory lastStatusState,
     StatusState.StatusType statusType,
-    bool refresh,
     uint64 subscriptionId,
     uint32 callbackGasLimit
   ) external returns (bytes32);
-
-  function fulfillBSLStatus(
-    bytes32 requestId,
-    StatusState.StatusType statusType,
-    StatusState.BSLStatus memory status
-  ) external;
 }

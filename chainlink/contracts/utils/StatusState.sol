@@ -28,7 +28,7 @@ library StatusState {
   function checkBSLStatusValidity(
     BSLStatus memory lastStatusState,
     BSLStatus memory newStatusState
-  ) public pure returns (bool) {
+  ) internal pure returns (bool) {
     return (lastStatusState.status & newStatusState.status) == lastStatusState.status;
   }
 }

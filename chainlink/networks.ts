@@ -33,7 +33,7 @@ if (SECOND_PRIVATE_KEY) {
   accounts.push(SECOND_PRIVATE_KEY)
 }
 
-const networks = {
+export const networks: { [key: string]: any} = {
   ethereum: {
     url: process.env.ETHEREUM_RPC_URL || "UNSET",
     gasPrice: undefined, // gas price for the functions request - default's to auto as per HH https://hardhat.org/hardhat-network/docs/reference#eth_gasprice
@@ -268,14 +268,12 @@ const networks = {
   },
   // localFunctionsTestnet is updated dynamically by scripts/startLocalFunctionsTestnet.js so it should not be modified here
   localFunctionsTestnet: {
-    url: "http://localhost:8545/",
-    accounts,
-    confirmations: 1,
-    nativeCurrencySymbol: "ETH",
-    linkToken: "0x069eE2Ec6aba43CF3B9aF2d1bF1b04c5E8626d35",
-    functionsRouter: "0x75Fff35851F630834C21Db74d2059a5356b9C1ee",
-    donId: "local-functions-testnet",
-  },
+      url: "http://localhost:8545/",
+      accounts,
+      confirmations: 1,
+      nativeCurrencySymbol: "ETH",
+      linkToken: "0xab1800a82d88E0d9aBCD8EF286354D237Fa0185a",
+      functionsRouter: "0xa19cA8365b901205FC105D6AF98924447433D2f2",
+      donId: "local-functions-testnet",
+    },
 }
-
-export default { networks };

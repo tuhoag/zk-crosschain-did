@@ -8,24 +8,53 @@ import {IStatusRegistry} from "./utils/IStatusRegistry.sol";
  * @title Chainlink Functions example on-demand consumer contract example
  */
 contract Verifier {
-  string public name;
+  event StatusUpdated(StatusState.IssuerId issuerId, StatusState.StatusType statusType);
+
+  uint8 public id;
+  uint64 public subscriptionId;
   IStatusRegistry public registryContract;
 
-  constructor(string memory _name, address _statusRegistryAddress) {
-    name = _name;
+  mapping(StatusState.IssuerId => StatusState.Issuer) public issuers;
+  mapping(StatusState.IssuerId => StatusState.BSLStatus) public blsIssuanceStatus;
+  mapping(StatusState.IssuerId => StatusState.BSLStatus) public blsRevocationStatus;
+
+  constructor(uint8 _id, address _statusRegistryAddress) {
+    id = _id;
     registryContract = IStatusRegistry(_statusRegistryAddress);
   }
 
-  function getName() public view returns (string memory) {
-    return name;
+  function getSubscriptionId() public view returns (uint64) {
+    return subscriptionId;
+  }
+
+  function setSubscriptionId(uint64 _subscriptionId) public {
+    subscriptionId = _subscriptionId;
+  }
+
+  function getId() public view returns (uint8) {
+    return id;
   }
 
   function requestStatus(
     StatusState.IssuerId issuerId,
     StatusState.StatusType statusType,
-    uint64 subscriptionId,
+    bool refresh,
     uint32 callbackGasLimit
   ) external {
-    registryContract.requestStatus(issuerId, statusType, subscriptionId, callbackGasLimit);
+    registryContract.requestStatus(address(this), issuerId, statusType, refresh, subscriptionId, callbackGasLimit);
+  }
+
+  function fulfillBSLStatus(
+    StatusState.IssuerId issuerId,
+    StatusState.StatusType statusType,
+    StatusState.BSLStatus memory status
+  ) external {
+    if (statusType == StatusState.StatusType.Issuance) {
+      blsIssuanceStatus[issuerId] = status;
+    } else if (statusType == StatusState.StatusType.Revocation) {
+      blsRevocationStatus[issuerId] = status;
+    }
+
+    emit StatusUpdated(issuerId, statusType);
   }
 }

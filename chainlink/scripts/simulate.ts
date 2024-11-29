@@ -6,41 +6,63 @@ import { Location } from "@chainlink/functions-toolkit";
 import { ResponseListener } from "@chainlink/functions-toolkit";
 import { Contract } from "ethers";
 import { get } from "http";
+import { networks } from "../networks";
 
-async function callSendRequest(consumerContract: Contract, subscriptionId: number) {
-    const source = await consumerContract.getSource();
-
-    const requestTx = await consumerContract.sendRequest(
-        source,
-        Location.Remote,
-        [],
-        ["http://localhost:3000", "0", "0", "1", "1"],
-        [],
+async function callStatusRegistryRequestStatus(contracts: { [key: string]: Contract }, data: { [key: string]: any }) {
+    const subscriptionId = data.subscriptionId;
+    const requestTx = await contracts.statusRegistryContract.requestStatus(
+        contracts.verifierContract.address,
+        1,
+        1,
+        true,
         subscriptionId.toString(),
         300_000,
         { gasLimit: 1_750_000 }
     );
-    const requestTxReceipt = await requestTx.wait(1);
-    console.log("requestStatus called");
-}
-
-async function callRequestStatus(consumerContract: Contract, subscriptionId: number) {
-    const requestTx = await consumerContract.requestStatus(
-        1,
-        1,
-        subscriptionId.toString(),
-        300_000,
-        { gasLimit: 1_750_000 }
-    );
-    console.log("requestStatus called");
+    console.log("Registry requestStatus called");
     const receipt = await requestTx.wait(1);
     console.log(`Gas used: ${receipt.gasUsed.toString()}`);
 
-    const filter = consumerContract.filters.ResponseReceived();
+    console.log("Waiting for event");
+    const filter = contracts.statusRegistryContract.filters.StatusUpdated();
+    let events = []
+    while (events.length === 0) {
+        events = await contracts.statusRegistryContract.queryFilter(filter, "latest");
+
+        events.forEach((event) => {
+            console.log(event.args);
+        });
+
+        if (events.length > 0) {
+            const issuanceStatus = await contracts.statusRegistryContract.getBSLStatus(1, 1);
+            // const revocationStatus = await contracts.statusRegistryContract.getBSLStatus(1, 0);
+            console.log(`Issuance status: ${issuanceStatus}`);
+        }
+    }
+}
+
+async function callChainlinkConsumerSendRequest(contracts: { [key: string]: Contract }, data: { [key: string]: any }) {
+    const subscriptionId = data.subscriptionId;
+    const source = fs.readFileSync(`${__dirname}/../functions/request-statuses.js`).toString();
+
+    const requestTx = await contracts.chainlinkConsumerContract.sendRequest(
+        source,
+        Location.Remote,
+        [],
+        ["http://localhost:3000", "0", "0", "1", "0"],
+        [],
+        subscriptionId.toString(),
+        300_000,
+        { gasLimit: 1_750_000 }
+    );
+    const receipt = await requestTx.wait(1);
+    console.log(`Gas used: ${receipt.gasUsed.toString()}`);
+
+    const filter = contracts.chainlinkConsumerContract.filters.ResponseReceived();
 
     let events = []
     while (events.length === 0) {
-        events = await consumerContract.queryFilter(filter, "latest");
+        events = await contracts.chainlinkConsumerContract.queryFilter(filter, "latest");
 
         events.forEach((event) => {
             console.log(event.args);
@@ -48,10 +70,72 @@ async function callRequestStatus(consumerContract: Contract, subscriptionId: num
     }
 }
 
-async function initContract(consumerContract: Contract) {
-    const source = fs.readFileSync(`${__dirname}/../functions/request-statuses.js`).toString();
-    await consumerContract.setSource(source);
-    await consumerContract.addIssuer(1, "http://localhost:3000", 0);
+async function callChainlinkConsumerRequestStatus(contracts: { [key: string]: Contract }, data: { [key: string]: any }) {
+    const subscriptionId = data.subscriptionId;
+
+    const requestTx = await contracts.chainlinkConsumerContract.requestBSLStatus(
+        contracts.statusRegistryContract.address,
+        "http://localhost:3000",
+        { time: 0, status: 0 },
+        1,
+        subscriptionId.toString(),
+        300_000,
+        { gasLimit: 1_750_000 }
+    );
+    const receipt = await requestTx.wait(1);
+    console.log(`Gas used: ${receipt.gasUsed.toString()}`);
+
+    const filter = contracts.chainlinkConsumerContract.filters.ResponseReceived();
+
+    let events = [];
+    while (events.length === 0) {
+        events = await contracts.chainlinkConsumerContract.queryFilter(filter, "latest");
+
+        events.forEach((event) => {
+            console.log(event.args);
+        });
+    }
+}
+
+async function callVerifierRequestStatus(contracts: { [key: string]: Contract }, data: { [key: string]: any }) {
+    const subscriptionId = data.subscriptionId;
+
+    await contracts.verifierContract.setSubscriptionId(subscriptionId);
+    console.log(`Verifier subscriptionId set to ${await contracts.verifierContract.getSubscriptionId()}`);
+
+    const requestTx = await contracts.verifierContract.requestStatus(
+        1,
+        1,
+        true,
+        300_000,
+        { gasLimit: 1_750_000 }
+    );
+    console.log("verifier requestStatus called");
+    const receipt = await requestTx.wait(1);
+    console.log(`Gas used: ${receipt.gasUsed.toString()}`);
+
+    const filter = contracts.verifierContract.filters.StatusUpdated();
+
+    let events = []
+    while (events.length === 0) {
+        events = await contracts.verifierContract.queryFilter(filter, "latest");
+
+        events.forEach((event) => {
+            console.log(event.args);
+        });
+
+        if (events.length > 0) {
+            const issuanceStatus = await contracts.verifierContract.getBSLStatus(1, 1);
+            // const revocationStatus = await contracts.statusRegistryContract.getBSLStatus(1, 0);
+            console.log(`Issuance status: ${issuanceStatus}`);
+        }
+    }
+}
+
+async function initContract(contracts: { [key: string]: Contract }, data: { [key: string]: any }) {
+    await contracts.verifierContract.setSubscriptionId(data.subscriptionId);
+
+    await contracts.statusRegistryContract.addIssuer(1, "http://localhost:3000", 0);
 }
 
 async function printBalance(subscriptionId: number) {
@@ -59,56 +143,74 @@ async function printBalance(subscriptionId: number) {
 }
 
 function getConsumerDeploymentOverrides(): { gasPrice?: number, nonce?: number } {
-    const overrides = {};
-
-    console.log(hre.networks);
+    const overrides = {} as { [key: string]: any };
 
     // If specified, use the gas price from the network config instead of Ethers estimated price
-    // if (networks[network.name].gasPrice) {
-    //   overrides.gasPrice = networks[network.name].gasPrice
-    // }
-    // // If specified, use the nonce from the network config instead of automatically calculating it
-    // if (networks[network.name].nonce) {
-    //   overrides.nonce = networks[network.name].nonce
-    // }
+    if (networks[network.name].gasPrice) {
+        overrides.gasPrice = networks[network.name].gasPrice;
+    }
+    // If specified, use the nonce from the network config instead of automatically calculating it
+    if (networks[network.name].nonce) {
+        overrides.nonce = networks[network.name].nonce;
+    }
 
+    // console.log(overrides);
     return overrides;
 }
 async function deployContracts() {
-    const StatusLibrary = await ethers.getContractFactory("StatusState");
-    const library = await StatusLibrary.deploy();
+    // const statusFactory = await ethers.getContractFactory("StatusState");
+    // const library = await statusFactory.deploy();
+    // console.log(`Deployed StatusLibrary at ${library.address}`);
 
-    console.log(`Deployed StatusLibrary at ${library.address}`);
+    const source = fs.readFileSync(`${__dirname}/../functions/request-statuses.js`).toString();
+    const chainlinkConsumerFactory = await ethers.getContractFactory("ChainlinkConsumer");
+    const chainlinkConsumerContract = await chainlinkConsumerFactory.deploy(
+        networks[network.name]["functionsRouter"],
+        hre.ethers.utils.formatBytes32String(networks[network.name]["donId"]),
+        source,
+        getConsumerDeploymentOverrides()
+    );
 
-    // const consumerContract = await consumerContractFactory.deploy(functionsRouter, donIdBytes32, overrides)
+    const StatusRegistryFactory = await ethers.getContractFactory("StatusRegistry");
 
-    const StatusRegistryContract = await ethers.getContractFactory("StatusRegistry", {
-        libraries: {
-            StatusState: library.address,
-        },
-    });
+    const statusRegistryContract = await StatusRegistryFactory.deploy(
+        chainlinkConsumerContract.address
+    );
+    console.log(`Deployed StatusRegistry at ${statusRegistryContract.address}`);
 
-    getConsumerDeploymentOverrides();
-
-    // const statusRegistryContract = await StatusRegistryContract.deploy(functionsRouter, donIdBytes32);
-    // console.log(`Deployed StatusRegistry at ${statusRegistryContract.address}`);
+    const VerifierFactory = await ethers.getContractFactory("Verifier");
+    const verifierContract = await VerifierFactory.deploy(
+        0,
+        statusRegistryContract.address,
+    );
+    console.log(`Deployed Verifier at ${verifierContract.address}`);
 
     return {
-
+        statusRegistryContract,
+        verifierContract,
+        chainlinkConsumerContract,
     }
 }
+
 async function main() {
-    const consumerContract = await deployContracts();
+    const contracts = await deployContracts();
 
-    // const subscriptionId = await run("functions-sub-create", { amount: "2", contract: consumerContract.address });
+    const subscriptionId = await run("functions-sub-create", { amount: "2", contract: contracts.chainlinkConsumerContract.address });
 
-    // await initContract(consumerContract);
-    // // await callSendRequest(consumerContract, subscriptionId);
+    await initContract(contracts, { subscriptionId });
 
-    // const beforeInfo = await run("functions-sub-info", { subid: subscriptionId.toString() });
-    // await callRequestStatus(consumerContract, subscriptionId);
-    // const afterInfo = await run("functions-sub-info", { subid: subscriptionId.toString() });
+    // await run("functions-request", { name: "ChainlinkConsumer", contract: contracts.chainlinkConsumerContract.address, subid: subscriptionId.toString(), configpath: `${__dirname}/../Functions-request-config.ts` });
+
+
+    // // // await callSendRequest(consumerContract, subscriptionId);
+
+    // const beforeInfo = await run("functions-sub-info", { subid: subscriptionId.toString(), log: false });
+    // // await callVerifierRequestStatus(contracts, subscriptionId);
+    // await callChainlinkConsumerSendRequest(contracts, { subscriptionId });
+    // await callChainlinkConsumerRequestStatus(contracts, { subscriptionId });
+    await callVerifierRequestStatus(contracts, { subscriptionId });
+    // const afterInfo = await run("functions-sub-info", { subid: subscriptionId.toString(), log: false });
     // console.log(`cost: ${beforeInfo.formattedBalance - afterInfo.formattedBalance} LINK`);
 }
 
-main()
+main();

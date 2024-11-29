@@ -6,8 +6,10 @@ task(
   "Gets the Functions billing subscription balance, owner, and list of authorized consumer contract addresses"
 )
   .addParam("subid", "Subscription ID")
+  .addParam("log", "Log the subscription info", true, types.boolean)
   .setAction(async (taskArgs) => {
     const subscriptionId = parseInt(taskArgs.subid)
+    const log = taskArgs.log
 
     const signer = await ethers.getSigner()
     const linkTokenAddress = networks[network.name]["linkToken"]
@@ -21,7 +23,10 @@ task(
     subInfo.formattedBalance = ethers.utils.formatEther(subInfo.balance)
     subInfo.balanceStr = ethers.utils.formatEther(subInfo.balance) + " LINK"
     subInfo.blockedBalance = ethers.utils.formatEther(subInfo.blockedBalance) + " LINK"
-    console.log(`\nInfo for subscription ${subscriptionId}:\n`, subInfo)
+
+    if (log) {
+      console.log(`\nInfo for subscription ${subscriptionId}:\n`, subInfo)
+    }
 
     return subInfo
   })

@@ -271,12 +271,10 @@ const networks = {
       accounts,
       confirmations: 1,
       nativeCurrencySymbol: "ETH",
-      linkToken: "0xF106E746816Eac47A1c0c6139045f0E2Edb2dcB5",
-      functionsRouter: "0xBeD79e061c937b206560c3c520003f463cD6E5F0",
+      linkToken: "0xab1800a82d88E0d9aBCD8EF286354D237Fa0185a",
+      functionsRouter: "0xa19cA8365b901205FC105D6AF98924447433D2f2",
       donId: "local-functions-testnet",
     },
 }
 
-module.exports = {
-  networks,
-}
+module.exports = { networks }
