@@ -4,5 +4,11 @@
 			"path": "."
 		}
 	],
-	"settings": {}
+	"settings": {
+		"github.copilot.advanced": {},
+		"editor.formatOnSave": true,
+		"editor.defaultFormatter": "esbenp.prettier-vscode",
+		"prettier.tabWidth": 4,
+		"prettier.useTabs": false
+	}
 }
