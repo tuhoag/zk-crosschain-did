@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import {StatusState} from "./utils/StatusState.sol";
 import {IOracleConsumer} from "./utils/IOracleConsumer.sol";
 import {IVerifier} from "./utils/IVerifier.sol";
+import {Errors} from "./utils/Errors.sol";
 
 /**
  * @title Chainlink Functions example on-demand consumer contract example
@@ -17,14 +18,6 @@ contract StatusRegistry {
   }
 
   StatusState.IssuerId public constant INVALID_ISSUER_ID = StatusState.IssuerId.wrap(0);
-
-  error IssuerNotFound(StatusState.IssuerId issuerId);
-  error RequestNotFound(bytes32 requestId);
-  error InvalidBSLStatus(bytes32 requestId);
-  error InvalidIssuerId(StatusState.IssuerId issuerId);
-  error InvalidStatusType(StatusState.StatusType statusType);
-  error UnsupportedStatusMechanism(StatusState.StatusMechanism);
-  error InvalidUrl(string url);
 
   event StatusUpdated(StatusState.IssuerId issuerId, StatusState.StatusType statusType);
 
@@ -41,7 +34,7 @@ contract StatusRegistry {
 
   function getIssuer(StatusState.IssuerId issuerId) external view returns (StatusState.Issuer memory) {
     StatusState.Issuer memory issuer = issuers[issuerId];
-    if (bytes(issuer.url).length == 0) revert IssuerNotFound(issuerId);
+    if (bytes(issuer.url).length == 0) revert Errors.IssuerNotFound(issuerId);
     return issuer;
   }
 
@@ -51,9 +44,9 @@ contract StatusRegistry {
     StatusState.StatusMechanism statusMechanism
   ) external {
     if (StatusState.IssuerId.unwrap(issuerId) == StatusState.IssuerId.unwrap(INVALID_ISSUER_ID))
-      revert InvalidIssuerId(issuerId);
+      revert Errors.InvalidIssuerId(issuerId);
 
-    if (bytes(url).length == 0) revert InvalidUrl(url);
+    if (bytes(url).length == 0) revert Errors.InvalidUrl(url);
 
     issuers[issuerId] = StatusState.Issuer(url, statusMechanism);
   }
@@ -63,14 +56,14 @@ contract StatusRegistry {
     StatusState.StatusType statusType
   ) external view returns (StatusState.BSLStatus memory) {
     if (StatusState.IssuerId.unwrap(issuerId) == StatusState.IssuerId.unwrap(INVALID_ISSUER_ID))
-      revert InvalidIssuerId(issuerId);
+      revert Errors.InvalidIssuerId(issuerId);
 
     if (statusType == StatusState.StatusType.Issuance) {
       return bslIssuanceStatuses[issuerId];
     } else if (statusType == StatusState.StatusType.Revocation) {
       return bslRevocationStatuses[issuerId];
     } else {
-      revert InvalidStatusType(statusType);
+      revert Errors.InvalidStatusType(statusType);
     }
   }
 
@@ -80,14 +73,14 @@ contract StatusRegistry {
     StatusState.BSLStatus memory status
   ) external {
     if (StatusState.IssuerId.unwrap(issuerId) == StatusState.IssuerId.unwrap(INVALID_ISSUER_ID))
-      revert InvalidIssuerId(issuerId);
+      revert Errors.InvalidIssuerId(issuerId);
 
     if (statusType == StatusState.StatusType.Issuance) {
       bslIssuanceStatuses[issuerId] = status;
     } else if (statusType == StatusState.StatusType.Revocation) {
       bslRevocationStatuses[issuerId] = status;
     } else {
-      revert InvalidStatusType(statusType);
+      revert Errors.InvalidStatusType(statusType);
     }
   }
 
@@ -100,10 +93,10 @@ contract StatusRegistry {
     uint32 callbackGasLimit
   ) external returns (bytes32) {
     if (StatusState.IssuerId.unwrap(issuerId) == StatusState.IssuerId.unwrap(INVALID_ISSUER_ID))
-      revert InvalidIssuerId(issuerId);
+      revert Errors.InvalidIssuerId(issuerId);
 
     StatusState.Issuer memory issuer = issuers[issuerId];
-    if (bytes(issuer.url).length == 0) revert IssuerNotFound(issuerId);
+    if (bytes(issuer.url).length == 0) revert Errors.IssuerNotFound(issuerId);
 
     StatusState.BSLStatus memory lastStatusState;
     if (statusType == StatusState.StatusType.Issuance) {
@@ -111,7 +104,7 @@ contract StatusRegistry {
     } else if (statusType == StatusState.StatusType.Revocation) {
       lastStatusState = bslRevocationStatuses[issuerId];
     } else {
-      revert InvalidStatusType(statusType);
+      revert Errors.InvalidStatusType(statusType);
     }
 
     bytes32 requestId;
@@ -141,7 +134,7 @@ contract StatusRegistry {
   ) external {
     Request memory request = requests[requestId];
     if (StatusState.IssuerId.unwrap(request.issuerId) == StatusState.IssuerId.unwrap(INVALID_ISSUER_ID))
-      revert RequestNotFound(requestId);
+      revert Errors.RequestNotFound(requestId);
 
     StatusState.BSLStatus memory lastStatusState;
     if (statusType == StatusState.StatusType.Issuance) {
@@ -149,10 +142,10 @@ contract StatusRegistry {
     } else if (statusType == StatusState.StatusType.Revocation) {
       lastStatusState = bslRevocationStatuses[request.issuerId];
     } else {
-      revert InvalidStatusType(statusType);
+      revert Errors.InvalidStatusType(statusType);
     }
 
-    if (!StatusState.checkBSLStatusValidity(lastStatusState, status)) revert InvalidBSLStatus(requestId);
+    if (!StatusState.checkBSLStatusValidity(lastStatusState, status)) revert Errors.InvalidBSLStatus(requestId);
 
     this.setBSLStatus(request.issuerId, statusType, status);
     IVerifier verifier = IVerifier(request.requesterAddress);

@@ -106,7 +106,7 @@ async function callVerifierRequestStatus(contracts: { [key: string]: Contract },
     const requestTx = await contracts.verifierContract.requestStatus(
         1,
         1,
-        true,
+        false,
         300_000,
         { gasLimit: 1_750_000 }
     );

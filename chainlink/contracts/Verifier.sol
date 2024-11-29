@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import {StatusState} from "./utils/StatusState.sol";
 import {IStatusRegistry} from "./utils/IStatusRegistry.sol";
+import {Errors} from "./utils/Errors.sol";
 
 /**
  * @title Chainlink Functions example on-demand consumer contract example
@@ -33,6 +34,19 @@ contract Verifier {
 
   function getId() public view returns (uint8) {
     return id;
+  }
+
+  function getBLSStatus(
+    StatusState.IssuerId issuerId,
+    StatusState.StatusType statusType
+  ) public view returns (StatusState.BSLStatus memory) {
+    if (statusType == StatusState.StatusType.Issuance) {
+      return blsIssuanceStatus[issuerId];
+    } else if (statusType == StatusState.StatusType.Revocation) {
+      return blsRevocationStatus[issuerId];
+    } else {
+      revert Errors.InvalidStatusType(statusType);
+    }
   }
 
   function requestStatus(

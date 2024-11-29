@@ -7,6 +7,7 @@ import {FunctionsRequest} from "@chainlink/contracts/src/v0.8/functions/v1_0_0/l
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {StatusState} from "./utils/StatusState.sol";
 import {IStatusRegistry} from "./utils/IStatusRegistry.sol";
+import {Errors} from "./utils/Errors.sol";
 
 /**
  * @title Chainlink Functions example on-demand consumer contract example
@@ -21,12 +22,6 @@ contract ChainlinkConsumer is FunctionsClient, ConfirmedOwner {
   }
 
   StatusState.IssuerId public constant INVALID_ISSUER_ID = StatusState.IssuerId.wrap(0);
-
-  error InvalidStatusType(StatusState.StatusType statusType);
-  error EmptySource();
-  error UnsupportedStatusMechanism(StatusState.StatusMechanism);
-  error InvalidUrl(string url);
-  error InvalidRequesterAddress(address requesterAddress);
 
   event ResponseReceived(bytes32 requestId, bytes response, bytes error);
 
@@ -45,7 +40,7 @@ contract ChainlinkConsumer is FunctionsClient, ConfirmedOwner {
   ) FunctionsClient(router) ConfirmedOwner(msg.sender) {
     donId = _donId;
 
-    if (bytes(_source).length == 0) revert EmptySource();
+    if (bytes(_source).length == 0) revert Errors.EmptySource();
     source = _source;
   }
 
@@ -62,7 +57,7 @@ contract ChainlinkConsumer is FunctionsClient, ConfirmedOwner {
   }
 
   function setSource(string calldata _source) external {
-    if (bytes(_source).length == 0) revert EmptySource();
+    if (bytes(_source).length == 0) revert Errors.EmptySource();
     source = _source;
   }
 
@@ -74,13 +69,13 @@ contract ChainlinkConsumer is FunctionsClient, ConfirmedOwner {
     uint64 subscriptionId,
     uint32 callbackGasLimit
   ) external returns (bytes32) {
-    if (bytes(source).length == 0) revert EmptySource();
+    if (bytes(source).length == 0) revert Errors.EmptySource();
 
-    if (requesterAddress == address(0)) revert InvalidRequesterAddress(requesterAddress);
+    if (requesterAddress == address(0)) revert Errors.InvalidRequesterAddress(requesterAddress);
 
-    if (bytes(url).length == 0) revert InvalidUrl(url);
+    if (bytes(url).length == 0) revert Errors.InvalidUrl(url);
 
-    if (statusType == StatusState.StatusType.Invalid) revert InvalidStatusType(statusType);
+    if (statusType == StatusState.StatusType.Invalid) revert Errors.InvalidStatusType(statusType);
 
     string[] memory args = new string[](5);
     args[0] = url;
@@ -159,7 +154,7 @@ contract ChainlinkConsumer is FunctionsClient, ConfirmedOwner {
         registry.fulfillBSLStatus(requestId, StatusState.StatusType.Invalid, StatusState.BSLStatus(0, 0));
       }
     } else {
-      revert UnsupportedStatusMechanism(request.statusMechanism);
+      revert Errors.UnsupportedStatusMechanism(request.statusMechanism);
     }
   }
 }
