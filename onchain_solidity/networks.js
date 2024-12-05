@@ -265,14 +265,21 @@ const networks = {
     donId: "fun-celo-mainnet-1",
     gatewayUrls: ["https://01.functions-gateway.chain.link/", "https://02.functions-gateway.chain.link/"],
   },
+  hardhat: {
+    accounts: [
+      {
+        privateKey: process.env.PRIVATE_KEY, balance: "1000000000000000000000000"
+      }
+    ]
+  },
   // localFunctionsTestnet is updated dynamically by scripts/startLocalFunctionsTestnet.js so it should not be modified here
   localFunctionsTestnet: {
-      url: "http://localhost:8545/",
+      url: "http://0.0.0.0:8545/",
       accounts,
       confirmations: 1,
       nativeCurrencySymbol: "ETH",
-      linkToken: "0xab1800a82d88E0d9aBCD8EF286354D237Fa0185a",
-      functionsRouter: "0xa19cA8365b901205FC105D6AF98924447433D2f2",
+      linkToken: "0x60BeAF51945dF7eC5E8f91e28bfDA93e22347F9A",
+      functionsRouter: "0x80Bf4de421058552e48733279f18d4b17e4EDb66",
       donId: "local-functions-testnet",
     },
 }

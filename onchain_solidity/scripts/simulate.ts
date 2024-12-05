@@ -106,7 +106,7 @@ async function callVerifierRequestStatus(contracts: { [key: string]: Contract },
     const requestTx = await contracts.verifierContract.requestStatus(
         1,
         1,
-        false,
+        true,
         300_000,
         { gasLimit: 1_750_000 }
     );
@@ -116,7 +116,7 @@ async function callVerifierRequestStatus(contracts: { [key: string]: Contract },
 
     const filter = contracts.verifierContract.filters.StatusUpdated();
 
-    let events = []
+    let events = [];
     while (events.length === 0) {
         events = await contracts.verifierContract.queryFilter(filter, "latest");
 
@@ -171,8 +171,11 @@ async function deployContracts() {
         getConsumerDeploymentOverrides()
     );
 
-    const StatusRegistryFactory = await ethers.getContractFactory("StatusRegistry");
+    const oracleManagerFactory = await ethers.getContractFactory("ZKOracleManager");
+    const oracleManagerContract = await oracleManagerFactory.deploy();
+    console.log(`Deployed ZKOracleManager at ${oracleManagerContract.address}`);
 
+    const StatusRegistryFactory = await ethers.getContractFactory("StatusRegistry");
     const statusRegistryContract = await StatusRegistryFactory.deploy(
         chainlinkConsumerContract.address
     );
@@ -208,6 +211,8 @@ async function main() {
     // // await callVerifierRequestStatus(contracts, subscriptionId);
     // await callChainlinkConsumerSendRequest(contracts, { subscriptionId });
     // await callChainlinkConsumerRequestStatus(contracts, { subscriptionId });
+
+    // await callStatusRegistryRequestStatus(contracts, { subscriptionId });
     await callVerifierRequestStatus(contracts, { subscriptionId });
     // const afterInfo = await run("functions-sub-info", { subid: subscriptionId.toString(), log: false });
     // console.log(`cost: ${beforeInfo.formattedBalance - afterInfo.formattedBalance} LINK`);

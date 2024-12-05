@@ -36,7 +36,7 @@ contract Verifier {
     return id;
   }
 
-  function getBLSStatus(
+  function getBSLStatus(
     StatusState.IssuerId issuerId,
     StatusState.StatusType statusType
   ) public view returns (StatusState.BSLStatus memory) {

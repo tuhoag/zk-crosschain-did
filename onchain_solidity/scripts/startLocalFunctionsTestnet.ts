@@ -4,7 +4,8 @@ import fs from "fs";
 import { startLocalFunctionsTestnet } from "@chainlink/functions-toolkit";
 import { utils, Wallet } from "ethers";
 import { config } from "@chainlink/env-enc";
-
+import { startMyLocalFunctionsTestnet } from "./localFunctionsTestnet";
+import { startMyLocalFunctionsTestnet1 } from "./localFunctionsTestnet1";
 // Loads environment variables from .env.enc file (if it exists)
 config();
 
@@ -12,7 +13,7 @@ async function main() {
   const requestConfigPath = path.join(process.cwd(), "Functions-request-config.ts");
   console.log(`Using Functions request config file ${requestConfigPath}\n`);
 
-  const localFunctionsTestnetInfo = await startLocalFunctionsTestnet(
+  const localFunctionsTestnetInfo = await startMyLocalFunctionsTestnet1(
     requestConfigPath,
     {
       logging: {
@@ -49,7 +50,7 @@ async function main() {
     let networksConfig = fs.readFileSync(configPath).toString();
     const regex = /localFunctionsTestnet:\s*{\s*([^{}]*)\s*}/s;
     const newContent = `localFunctionsTestnet: {
-      url: "http://localhost:8545/",
+      url: "http://0.0.0.0:8545/",
       accounts,
       confirmations: 1,
       nativeCurrencySymbol: "ETH",

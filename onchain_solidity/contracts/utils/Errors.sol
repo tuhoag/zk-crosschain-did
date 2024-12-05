@@ -13,4 +13,7 @@ library Errors {
   error RequestNotFound(bytes32 requestId);
   error InvalidBSLStatus(bytes32 requestId);
   error InvalidIssuerId(StatusState.IssuerId issuerId);
+  error InvalidDeposit(uint64 token);
+  error OracleNotFound(uint256 oracleId);
+  error OracleAlreadyExists(uint256 oracleId);
 }

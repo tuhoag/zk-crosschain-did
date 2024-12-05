@@ -1,0 +1,14 @@
+{
+  "1337": {
+    "StatusRegistry": "0x86c6eB9d1a796731EBeBb14C4B1E13a0a31fe752",
+    "Verifier": "0x8455d1059e2812eD7B646EfAa2548C7AfdFE18aa",
+    "ChainlinkConsumer": "0x697F70aD3cCB510F9d01Fd2A3AC751f359f70EeB",
+    "ZKOracleManager": "0x6757089809123eDA2b2C091D38f6b31503318654"
+  },
+  "31337": {
+    "StatusRegistry": "0x11b635946e5CbB98348e7c80CE946f9949E65135",
+    "Verifier": "0x53CCCaF7CD18522d20aCF5f93899B1F24d3Cb08e",
+    "ChainlinkConsumer": "0x36130659BE92e0b72dF1b11c04e94c78c895A2B8",
+    "ZKOracleManager": "0x1C67A6d2A423Aa2cd60D21E93FCfBC1d10b8Eb9e"
+  }
+}

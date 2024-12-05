@@ -67,6 +67,7 @@
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-ignition": "^0.15.7",
+    "hardhat-deploy": "^0.14.0",
     "husky": "^9.1.6",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.2"
