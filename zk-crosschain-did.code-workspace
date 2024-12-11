@@ -1,14 +1,46 @@
 {
-	"folders": [
-		{
-			"path": "."
-		}
-	],
-	"settings": {
-		"github.copilot.advanced": {},
-		"editor.formatOnSave": true,
-		"editor.defaultFormatter": "esbenp.prettier-vscode",
-		"prettier.tabWidth": 4,
-		"prettier.useTabs": false
-	}
+    "folders": [
+        {
+            "name": "data_apis",
+            "path": "data_apis"
+        },
+        {
+            "name": "onchain_solidity",
+            "path": "onchain_solidity"
+        },
+        {
+            "path": "zk_oracles"
+        },
+        {
+            "path": "docker"
+        },
+        {
+            "path": "runner"
+        },
+        {
+            "path": "zkcdid-lib-rs"
+        },
+        {
+            "path": ".devcontainer"
+        },
+        {
+            "path": "deployments"
+        }
+    ],
+    "settings": {
+        "github.copilot.advanced": {},
+        "editor.formatOnSave": false,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "prettier.tabWidth": 4,
+        "prettier.useTabs": false,
+        "[ignore]": {
+            "editor.defaultFormatter": "foxundermoon.shell-format"
+        },
+        "[dotenv]": {
+            "editor.defaultFormatter": "foxundermoon.shell-format"
+        },
+        "[shellscript]": {
+            "editor.defaultFormatter": "mads-hartmann.bash-ide-vscode"
+        }
+    }
 }

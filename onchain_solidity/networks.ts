@@ -279,8 +279,8 @@ export const networks: { [key: string]: any} = {
       accounts,
       confirmations: 1,
       nativeCurrencySymbol: "ETH",
-      linkToken: "0x60BeAF51945dF7eC5E8f91e28bfDA93e22347F9A",
-      functionsRouter: "0x80Bf4de421058552e48733279f18d4b17e4EDb66",
+      linkToken: "0x18d30569E38dC2e7d4C5Cf100DA9B699DCdd1280",
+      functionsRouter: "0x158AC785189aDA8df28103d937A1D26A5bfA9B2C",
       donId: "local-functions-testnet",
     },
 }

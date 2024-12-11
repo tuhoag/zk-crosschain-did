@@ -1,0 +1,7 @@
+{
+    "name": "api",
+    "dockerComposeFile": "../../docker/docker-compose.yml",
+    "service": "api0",
+    "shutdownAction": "none",
+    "workspaceFolder": "/app/data_apis"
+}

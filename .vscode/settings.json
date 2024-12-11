@@ -1,3 +1,5 @@
 {
-    "prettier.tabWidth": 4
+    "[dotenv]": {
+        "editor.formatOnSave": false
+    }
 }

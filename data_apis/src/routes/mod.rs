@@ -1,4 +1,4 @@
-use actix_web::{middleware::Logger, web};
+use actix_web::web;
 
 pub mod status_routes;
 pub mod credential_routes;

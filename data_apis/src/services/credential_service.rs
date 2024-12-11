@@ -4,8 +4,9 @@ use bson::{doc, oid::ObjectId};
 use futures_util::TryStreamExt;
 use mongodb::{Collection, Database};
 use url::Url;
+use zkcdid_lib_rs::{config::Config, models::{credential::Credential, request_params::CredentialIssuanceParams, status_state::{StatusMechanism, StatusType}}};
 
-use crate::{config::{Config, DEFAULT_CREDENTIALS_COLLECTION_NAME}, errors::AppResult, models::{credential::Credential, request_params::CredentialIssuanceParams, status_state::{StatusMechanism, StatusType}}};
+use crate::errors::ApiResult;
 
 use super::status_service::StatusService;
 
@@ -17,15 +18,17 @@ pub struct CredentialService {
 
 impl CredentialService {
     pub fn new(database: &Database) -> Self {
+        let config = Config::load_api_config();
+
         Self {
             collections: [
-                (StatusMechanism::BitStatusList, database.collection(&format!("{}_bsl", DEFAULT_CREDENTIALS_COLLECTION_NAME))),
-                (StatusMechanism::MerkleTree, database.collection(&format!("{}_merkle", DEFAULT_CREDENTIALS_COLLECTION_NAME))),
+                (StatusMechanism::BitStatusList, database.collection(&format!("{}_bsl", config.get_credentials_collection_name()))),
+                (StatusMechanism::MerkleTree, database.collection(&format!("{}_merkle", config.get_credentials_collection_name()))),
             ].into_iter().collect(),
         }
     }
 
-    pub async fn delete_all(&self) -> AppResult<()> {
+    pub async fn delete_all(&self) -> ApiResult<()> {
         for collection in self.collections.values() {
             collection.delete_many(doc! {}).await?;
         }
@@ -33,19 +36,19 @@ impl CredentialService {
         Ok(())
     }
 
-    pub async fn reset(&self) -> AppResult<()> {
+    pub async fn reset(&self) -> ApiResult<()> {
         self.delete_all().await?;
         Ok(())
     }
 
-    pub async fn insert_one(&self, credential: &mut Credential) -> AppResult<()> {
+    pub async fn insert_one(&self, credential: &mut Credential) -> ApiResult<()> {
         let collection = self.collections.get(&credential.status_mechanism).unwrap();
         let res = collection.insert_one(&mut *credential).await?;
         credential.id = res.inserted_id.as_object_id();
         Ok(())
     }
 
-    pub async fn get_credential_by_id(&self, status_mechanism: &StatusMechanism, id: &str) -> AppResult<Credential> {
+    pub async fn get_credential_by_id(&self, status_mechanism: &StatusMechanism, id: &str) -> ApiResult<Credential> {
         let object_id = ObjectId::parse_str(id)?;
         let collection = self.collections.get(&status_mechanism).unwrap();
         let filter = doc! { "_id": object_id};
@@ -54,14 +57,14 @@ impl CredentialService {
         Ok(credential.unwrap())
     }
 
-    pub async fn get_all_credentials(&self, status_mechanism: StatusMechanism) -> AppResult<Vec<Credential>> {
+    pub async fn get_all_credentials(&self, status_mechanism: StatusMechanism) -> ApiResult<Vec<Credential>> {
         let collection = self.collections.get(&status_mechanism).unwrap();
         let cursor = collection.find(doc! {}).await?;
         let credentials = cursor.try_collect::<Vec<Credential>>().await?;
         Ok(credentials)
     }
 
-    pub async fn get_next_credential_index(&self, status_mechanism: &StatusMechanism) -> AppResult<u64> {
+    pub async fn get_next_credential_index(&self, status_mechanism: &StatusMechanism) -> ApiResult<u64> {
         let collection = self.collections.get(&status_mechanism).unwrap();
         let credential = collection
             .find_one(doc! {})
@@ -80,7 +83,7 @@ impl CredentialService {
         }
     }
 
-    fn build_status_url(status_mechanism: &StatusMechanism, status_type: &StatusType, base_url: &str) -> AppResult<String> {
+    fn build_status_url(status_mechanism: &StatusMechanism, status_type: &StatusType, base_url: &str) -> ApiResult<String> {
         let mut api_url = Url::parse(base_url)?;
         api_url = api_url.join(&format!("statuses/{}/{}", status_mechanism, status_type))?;
         // api_url = api_url.join(&serde_json::to_string(status_mechanism)?)?;
@@ -92,10 +95,10 @@ impl CredentialService {
         Ok(api_url.to_string())
     }
 
-    pub async fn issue_credential(&self, issuance_params: &CredentialIssuanceParams, status_mechanism: &StatusMechanism, status_service: &StatusService, config: &Config) -> AppResult<Credential> {
+    pub async fn issue_credential(&self, issuance_params: &CredentialIssuanceParams, status_mechanism: &StatusMechanism, status_service: &StatusService, config: &Config) -> ApiResult<Credential> {
         // get status url
-        let issuance_status_url = Self::build_status_url(status_mechanism, &StatusType::Issuance, &config.api_url)?;
-        let revocation_status_url = Self::build_status_url(status_mechanism, &StatusType::Revocation, &config.api_url)?;
+        let issuance_status_url = Self::build_status_url(status_mechanism, &StatusType::Issuance, &config.get_api_url())?;
+        let revocation_status_url = Self::build_status_url(status_mechanism, &StatusType::Revocation, &config.get_api_url())?;
 
         // get the highest index of all credentials
         let index = self.get_next_credential_index(status_mechanism).await?;
@@ -114,7 +117,7 @@ impl CredentialService {
             &revocation_status_url,
             time,
         );
-        credential.update_hash_sha256();
+        // credential.update_hash_sha256();
 
         self.insert_one(&mut credential).await?;
 
@@ -129,7 +132,7 @@ impl CredentialService {
         Ok(credential)
     }
 
-    pub async fn revoke_credential(&self, id: &str, status_mechanism: &StatusMechanism, status_service: &StatusService) -> AppResult<Credential> {
+    pub async fn revoke_credential(&self, id: &str, status_mechanism: &StatusMechanism, status_service: &StatusService) -> ApiResult<Credential> {
         // get the credential by id
         let credential = self.get_credential_by_id(status_mechanism, id).await?;
 

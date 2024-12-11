@@ -4,9 +4,10 @@ use mongodb::Database;
 use serde::{Deserialize, Deserializer, Serializer};
 use sha2::{Digest, Sha256};
 use serde::de::Error as DeError;
+use zkcdid_lib_rs::{config::Config, utils::db};
 
 
-use crate::{config::Config, db, errors::AppResult, services::{credential_service::CredentialService, status_service::StatusService}};
+use crate::{errors::ApiResult, services::{credential_service::CredentialService, status_service::StatusService}};
 
 pub fn u64_to_base64<S>(num: &u64, serializer: S) -> Result<S::Ok, S::Error>
 where
@@ -67,7 +68,7 @@ pub struct AppData {
 }
 
 impl AppData {
-    pub async fn new(config: &Config) -> AppResult<Self> {
+    pub async fn new(config: &Config) -> ApiResult<Self> {
         match db::get_db(config).await {
             Ok(database) => {
                 let status_service = StatusService::new(&database);
@@ -80,7 +81,7 @@ impl AppData {
                     config: config.clone(),
                 })
             }
-            Err(e) => Err(e),
+            Err(e) => Err(e.into()),
         }
     }
 }
@@ -91,7 +92,7 @@ pub fn calculate_sha256_hash(data: &[u8]) -> Vec<u8> {
     hasher.finalize().to_vec()
 }
 
-pub fn calculate_poseidon_hash() -> AppResult<()> {
+pub fn calculate_poseidon_hash() -> ApiResult<()> {
     // converting data to Fr
    unimplemented!("This function must be implemented after checking poseidon hash crates");
 }

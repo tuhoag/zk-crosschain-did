@@ -1,0 +1,43 @@
+version: '3'
+networks:
+  zkssi:
+    driver: bridge
+
+services:
+  mongo:
+    image: mongo:latest
+
+  api0:
+    build:
+      dockerfile: Dockerfile.api
+    ports:
+      - "3000:8000"
+    depends_on:
+      - mongo
+    environment:
+      - NAME=api0
+      - API_URL=http://api0:3000
+      - MONGO_URI=mongodb://mongo:27017
+    volumes:
+      - ../data_apis:/app/data_apis
+      - ../zkcdid-lib-rs:/app/zkcdid-lib-rs
+    networks:
+      - zkssi
+    working_dir: /app/data_apis
+
+  oracle0:
+    build:
+      dockerfile: Dockerfile.oracle
+    depends_on:
+      - api0
+    ports:
+      - "4000:8000"
+    networks:
+      - zkssi
+    volumes:
+      - ../zk_oracles:/app/src
+      - ../onchain_solidity/build/artifacts/contracts:/app/src/artifacts
+      - ../onchain_solidity/deployment-info.json:/app/src/config/deployment-info.json
+    environment:
+      - ORACLE_ID=0
+      - PRIVATE_KEY=0x27d07ae27bb28a2ba3d9f72b79bdc51b9a65f5c75bae160aaf602e50ea531808

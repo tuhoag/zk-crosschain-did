@@ -1,9 +1,8 @@
-use base64::{engine::general_purpose, Engine};
 use bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::utils::calculate_sha256_hash;
+// use crate::utils::serializer::calculate_sha256_hash;
 
 use super::status_state::StatusMechanism;
 
@@ -12,8 +11,8 @@ pub struct Credential {
     #[serde(
         rename = "_id",
         skip_serializing_if = "Option::is_none",
-        // serialize_with = "serialize_object_id_as_string",
-        // deserialize_with = "deserialize_object_id_from_string"
+        serialize_with = "crate::utils::serializer::serialize_object_id_as_string",
+        deserialize_with = "crate::utils::serializer::deserialize_object_id"
     )]
     pub id: Option<ObjectId>,
     pub subject: String,
@@ -69,23 +68,23 @@ impl Credential {
         credential
     }
 
-    pub fn calculate_hash_sha256(&self) -> Vec<u8> {
-        let mut credential = self.clone();
-        credential.id = None;
-        credential.hash = None;
-        credential.signature = None;
+    // pub fn calculate_hash_sha256(&self) -> Vec<u8> {
+    //     let mut credential = self.clone();
+    //     credential.id = None;
+    //     credential.hash = None;
+    //     credential.signature = None;
 
-        let json_data = serde_json::to_vec(&credential).unwrap();
-        calculate_sha256_hash(&json_data)
-    }
+    //     let json_data = serde_json::to_vec(&credential).unwrap();
+    //     // calculate_sha256_hash(&json_data)
+    // }
 
-    pub fn update_hash_sha256(&mut self) {
-        self.hash = Some(general_purpose::STANDARD.encode(&self.calculate_hash_sha256()));
-    }
+    // pub fn update_hash_sha256(&mut self) {
+    //     self.hash = Some(general_purpose::STANDARD.encode(&self.calculate_hash_sha256()));
+    // }
 
-    pub fn calculate_hash_poseidon(&self) -> Vec<u8> {
-        unimplemented!()
-    }
+    // pub fn calculate_hash_poseidon(&self) -> Vec<u8> {
+    //     unimplemented!()
+    // }
 
 
     // pub fn calculate_signature(&self, private_key: &[u8]) -> Signature {

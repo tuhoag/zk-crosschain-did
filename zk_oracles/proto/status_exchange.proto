@@ -1,0 +1,47 @@
+syntax = "proto3";
+package status_exchange;
+
+service StatusExchangeService {
+  rpc SayHello (HelloRequest) returns (HelloReply);
+  rpc FulfillRequest (RequestFulfillment) returns (RequestFulfillmentResult);
+}
+
+message HelloRequest {
+  uint32 oracle_id = 1;
+  string name = 2;
+}
+
+message HelloReply {
+  string message = 1;
+}
+
+enum StatusMechanism {
+  BitStatusList = 0;
+  MerkleTree = 1;
+}
+
+enum StatusType {
+  Invalid = 0;
+  Issuance = 1;
+  Revocation = 2;
+}
+
+message StatusMessage {
+  string id = 1;
+  uint64 time = 2;
+  StatusMechanism status_mechanism = 3;
+  StatusType status_type = 4;
+  uint64 status = 5;
+  string proof = 6;
+  string signature = 7;
+}
+
+message RequestFulfillment {
+  uint64 request_id = 1;
+  uint32 oracle_id = 2;
+  repeated StatusMessage statuses = 3;
+}
+
+message RequestFulfillmentResult {
+  bool result = 1;
+}

@@ -1,8 +1,11 @@
 # Stage 1: Build the Rust application
 FROM rust:latest
 
+RUN mkdir /app
+RUN mkdir /app/data_apis & mkdir /app/zkcdid-lib-rs
+
 # Create a new directory for the app and set it as the working directory
-WORKDIR /app
+WORKDIR /app/data_apis
 
 # Install
 RUN cargo install cargo-watch

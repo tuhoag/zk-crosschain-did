@@ -2,11 +2,10 @@ use bson::{doc, Bson};
 use futures_util::TryStreamExt;
 use mongodb::{Collection, Database};
 use strum::IntoEnumIterator;
+use zkcdid_lib_rs::{config::Config, models::{request_params::StatusQueryParams, status_state::{StatusMechanism, StatusState, StatusType}}};
 use std::collections::HashMap;
 
-use crate::{
-    config::DEFAULT_STATUSES_COLLECTION_NAME, errors::AppResult, models::{request_params::StatusQueryParams, status_state::{StatusMechanism, StatusState, StatusType}}
-};
+use crate::errors::ApiResult;
 
 
 #[derive(Debug, Clone)]
@@ -21,10 +20,12 @@ impl StatusService {
 
     pub fn new(database: &Database) -> Self {
         let mut collections = HashMap::new();
+        let config = Config::load_api_config();
+
 
         for status_mechanism in StatusMechanism::iter() {
             for status_type in StatusType::iter() {
-                let collection_name = Self::get_collection_name(DEFAULT_STATUSES_COLLECTION_NAME, &status_mechanism, &status_type);
+                let collection_name = Self::get_collection_name(config.get_statuses_collection_name(), &status_mechanism, &status_type);
                 let collection = database.collection(&collection_name);
                 collections.insert((status_mechanism, status_type), collection);
             }
@@ -35,19 +36,19 @@ impl StatusService {
         }
     }
 
-    pub async fn reset(&self) -> AppResult<()> {
+    pub async fn reset(&self) -> ApiResult<()> {
         self.delete_all().await?;
         self.insert_first_status().await?;
         Ok(())
     }
 
-    pub async fn initialize(&self) -> AppResult<()> {
+    pub async fn initialize(&self) -> ApiResult<()> {
         // create the first status
         self.insert_first_status().await?;
         Ok(())
     }
 
-    pub async fn insert_first_status(&self) -> AppResult<()> {
+    pub async fn insert_first_status(&self) -> ApiResult<()> {
         // create the first status
         for status_type in StatusType::iter() {
             let first_status = StatusState::get_initial_status(StatusMechanism::BitStatusList, status_type);
@@ -58,20 +59,20 @@ impl StatusService {
         Ok(())
     }
 
-    fn get_collection(&self, status_mechanism: &StatusMechanism, status_type: &StatusType) -> AppResult<&Collection<StatusState>> {
+    fn get_collection(&self, status_mechanism: &StatusMechanism, status_type: &StatusType) -> ApiResult<&Collection<StatusState>> {
         match self.collections.get(&(*status_mechanism, *status_type)) {
             Some(collection) => Ok(collection),
             None => Err("Collection not found".into())
         }
     }
 
-    pub async fn insert_one(&self, status: &StatusState) -> AppResult<()> {
+    pub async fn insert_one(&self, status: &StatusState) -> ApiResult<()> {
         let collection = self.get_collection(&status.status_mechanism, &status.status_type)?;
         collection.insert_one(status).await?;
         Ok(())
     }
 
-    pub async fn get_statuses(&self, status_mechanism: &StatusMechanism, status_type: &StatusType, query: &StatusQueryParams) -> AppResult<Vec<StatusState>> {
+    pub async fn get_statuses(&self, status_mechanism: &StatusMechanism, status_type: &StatusType, query: &StatusQueryParams) -> ApiResult<Vec<StatusState>> {
         let start_time = Bson::Int64(query.time.unwrap_or(0) as i64);
         let collection = self.get_collection(status_mechanism, status_type)?;
         let cursor = collection
@@ -83,7 +84,7 @@ impl StatusService {
         Ok(statuses)
     }
 
-    pub async fn get_latest_status(&self, status_mechanism: &StatusMechanism, status_type: &StatusType) -> AppResult<StatusState> {
+    pub async fn get_latest_status(&self, status_mechanism: &StatusMechanism, status_type: &StatusType) -> ApiResult<StatusState> {
         // Find the document with the highest time value
         let collection = self.get_collection(status_mechanism, status_type)?;
         let status = collection
@@ -95,7 +96,7 @@ impl StatusService {
         Ok(status.unwrap())
     }
 
-    pub async fn delete_all(&self) -> AppResult<()> {
+    pub async fn delete_all(&self) -> ApiResult<()> {
         for collection in self.collections.values() {
             collection.delete_many(doc! {}).await?;
         }

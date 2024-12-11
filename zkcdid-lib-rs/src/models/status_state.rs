@@ -4,7 +4,7 @@ use bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use strum_macros::EnumIter;
 
-use crate::utils::{base64_to_u64, u64_to_base64};
+use crate::utils::serializer::{base64_to_u64, u64_to_base64};
 
 #[derive(Serialize, Deserialize, Debug, Copy, Clone, Hash, PartialEq, Eq, EnumIter)]
 #[serde(rename_all = "lowercase")]
@@ -46,11 +46,13 @@ impl Display for StatusType {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct StatusState {
     #[serde(
         rename = "_id",
         skip_serializing_if = "Option::is_none",
+        serialize_with = "crate::utils::serializer::serialize_object_id_as_string",
+        deserialize_with = "crate::utils::serializer::deserialize_object_id"
     )]
     pub id: Option<ObjectId>,
     pub time: u64,

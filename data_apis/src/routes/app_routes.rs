@@ -1,14 +1,14 @@
 use actix_web::{web::{self, Data, Json}, Responder};
 
-use crate::{errors::AppResult, utils::AppData};
+use crate::{errors::ApiResult, utils::AppData};
 
-async fn get_configuration(app_data: Data<AppData>) -> AppResult<impl Responder> {
+async fn get_configuration(app_data: Data<AppData>) -> ApiResult<impl Responder> {
     println!("Getting configuration");
     let config = &app_data.config;
     Ok(Json(config.clone()))
 }
 
-async fn reset(app_data: Data<AppData>) -> AppResult<impl Responder> {
+async fn reset(app_data: Data<AppData>) -> ApiResult<impl Responder> {
     let status_service = &app_data.status_service;
     let credential_service = &app_data.credential_service;
 

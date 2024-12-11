@@ -1,3 +1,4 @@
+import fs from 'fs'
 import { Wallet, Contract, ContractFactory, utils, providers } from 'ethers'
 import Ganache from 'ganache'
 import cbor from 'cbor'
@@ -161,6 +162,8 @@ const handleOracleRequest = async (
   admin: Wallet,
   simulationConfigPath?: string,
 ) => {
+
+  console.log("handleOracleRequest")
   const response = await simulateDONExecution(requestEventData, simulationConfigPath)
 
   const errorHexstring = response.errorString
@@ -176,7 +179,10 @@ const handleOracleRequest = async (
   const reportTx = await mockCoordinator
     .connect(admin)
     .callReport(encodedReport, { gasLimit: callReportGasLimit })
-  await reportTx.wait(1)
+  const receipt = await reportTx.wait(1)
+  console.log(`Fulfillment Gas used: ${receipt.gasUsed.toString()}`);
+  fs.writeFileSync('fulfill_gas.txt', receipt.gasUsed.toString())
+
 }
 
 const simulateDONExecution = async (

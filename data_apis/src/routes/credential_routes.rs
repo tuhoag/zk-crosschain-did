@@ -1,8 +1,9 @@
 use actix_web::{web::{self, Data, Json}, Responder};
+use zkcdid_lib_rs::models::{request_params::CredentialIssuanceParams, status_state::StatusMechanism};
 
-use crate::{errors::AppResult, models::{request_params::CredentialIssuanceParams, status_state::StatusMechanism}, utils::AppData};
+use crate::{errors::ApiResult, utils::AppData};
 
-async fn issue(status_mechanism: web::Path<StatusMechanism>, issuance_params: web::Json<CredentialIssuanceParams>, app_data: Data<AppData>) -> AppResult<impl Responder> {
+async fn issue(status_mechanism: web::Path<StatusMechanism>, issuance_params: web::Json<CredentialIssuanceParams>, app_data: Data<AppData>) -> ApiResult<impl Responder> {
     let credential_service = &app_data.credential_service;
     let status_service = &app_data.status_service;
 
@@ -10,7 +11,7 @@ async fn issue(status_mechanism: web::Path<StatusMechanism>, issuance_params: we
     Ok(Json(credential))
 }
 
-async fn revoke(params: web::Path<(StatusMechanism, String)>, app_data: Data<AppData>) -> AppResult<impl Responder> {
+async fn revoke(params: web::Path<(StatusMechanism, String)>, app_data: Data<AppData>) -> ApiResult<impl Responder> {
     let credential_service = &app_data.credential_service;
     let status_service = &app_data.status_service;
     let (status_mechanism, id) = params.into_inner();
@@ -18,7 +19,7 @@ async fn revoke(params: web::Path<(StatusMechanism, String)>, app_data: Data<App
     Ok(Json(credential))
 }
 
-async fn get_credential(params: web::Path<(StatusMechanism, String)>, app_data: Data<AppData>) ->  AppResult<impl Responder> {
+async fn get_credential(params: web::Path<(StatusMechanism, String)>, app_data: Data<AppData>) ->  ApiResult<impl Responder> {
     let service = &app_data.credential_service;
     let (status_mechanism, id) = params.into_inner();
 
@@ -26,7 +27,7 @@ async fn get_credential(params: web::Path<(StatusMechanism, String)>, app_data: 
     Ok(Json(credential))
 }
 
-async fn get_all_credentials(status_mechanism: web::Path<StatusMechanism>, app_data: Data<AppData>) -> AppResult<impl Responder> {
+async fn get_all_credentials(status_mechanism: web::Path<StatusMechanism>, app_data: Data<AppData>) -> ApiResult<impl Responder> {
     let service = &app_data.credential_service;
 
     let credentials = service.get_all_credentials(*status_mechanism).await?;

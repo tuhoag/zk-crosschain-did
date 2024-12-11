@@ -1,0 +1,7 @@
+{
+    "name": "oracle",
+    "dockerComposeFile": "../../docker/docker-compose.yml",
+    "service": "oracle0",
+    "shutdownAction": "none",
+    "workspaceFolder": "/app/zk_oracles"
+}

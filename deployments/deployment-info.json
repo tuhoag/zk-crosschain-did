@@ -1,0 +1,8 @@
+{
+  "31337": {
+    "StatusRegistry": "0x09c74b1D487880EDd0f460Ec981B18e2cFf4CdBa",
+    "Verifier": "0xf0cE8d6de1200d6F2314E87AC35f4B25c9a46f74",
+    "ChainlinkConsumer": "0xFB791E1D9eCC15fBA5AE882bED592eC2Bfe2cAA5",
+    "ZKOracleManager": "0x092dC9d36166Bd6EAE09072276216220D1Ee0adB"
+  }
+}

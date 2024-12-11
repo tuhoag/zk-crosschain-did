@@ -64,7 +64,7 @@ async function deployContracts(): Promise<{ [key: string]: Contract }> {
 
 async function writeDeploymentInfo(contracts: { [key: string]: Contract }) {
     const chainId = (await ethers.provider.getNetwork()).chainId;
-    const infoPath = `${__dirname}/../deployment-info.json`;
+    const infoPath = `${__dirname}/../../deployments/deployment-info.json`;
     let deploymentInfo = fs.existsSync(infoPath) ? JSON.parse(fs.readFileSync(infoPath).toString()) : {};
 
     deploymentInfo[chainId] = {
@@ -76,9 +76,35 @@ async function writeDeploymentInfo(contracts: { [key: string]: Contract }) {
     fs.writeFileSync(infoPath, JSON.stringify(deploymentInfo, null, 2));
 }
 
+async function copyArtifacts() {
+    const dstDeploymentsPath = `${__dirname}/../../deployments`;
+    const dstArtifactsPath = `${dstDeploymentsPath}/artifacts`;
+    const srcArtifactsPath = `${__dirname}/../build/artifacts/contracts`;
+
+    if (!fs.existsSync(dstArtifactsPath)) {
+        fs.mkdirSync(dstArtifactsPath);
+    }
+
+    const artifacts = fs.readdirSync(srcArtifactsPath);
+    for (const artifact of artifacts) {
+        const name = artifact.split(".")[0];
+        const srcPath = `${srcArtifactsPath}/${artifact}/${name}.json`;
+        const dstPath = `${dstArtifactsPath}/${name}.json`;
+        // console.log(srcPath);
+        // console.log(dstPath);
+        try {
+            fs.copyFileSync(srcPath, dstPath);
+        } catch (error) {
+            console.warn(`Failed to copy contract ${name}`);
+        }
+
+    }
+}
 async function main() {
     const contracts = await deployContracts();
-    writeDeploymentInfo(contracts);
+    await writeDeploymentInfo(contracts);
+    // copy artifacts
+    await copyArtifacts();
 }
 
 main();
