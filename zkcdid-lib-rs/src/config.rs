@@ -18,7 +18,8 @@ pub const MAX_TRIAL: u8 = 3;
 
 // default oracle config
 pub const DEFAULT_NEIGHBORS_COLLECTION_NAME: &str = "neighbors";
-pub const DEFAULT_REQUESTS_COLLECTION_NAME: &str = "requests";
+pub const DEFAULT_REPORTS_COLLECTION_NAME: &str = "reports";
+pub const DEFAULT_ORACLE_REQUESTS_COLLECTION_NAME: &str = "requests";
 pub const DEFAULT_WAITING_INTERVAL: u64 = 3;
 pub const DEFAULT_SOLIDITY_ARTIFACTS_PATH: &str = "../deployments/artifacts";
 pub const DEFAULT_SOLIDITY_DEPLOYMENT_PATH: &str = "../deployments/deployment-info.json";
@@ -66,7 +67,8 @@ impl Config {
             "CHAIN_ID" => env::var("CHAIN_ID").unwrap_or(DEFAULT_CHAIN_ID.to_string()),
             "ORACLE_MANAGER_CONTRACT_NAME" => env::var("ORACLE_MANAGER_CONTRACT_NAME").unwrap_or(DEFAULT_ORACLE_MANAGER_CONTRACT_NAME.to_string()),
             "NEIGHBORS_COLLECTION_NAME" => env::var("NEIGHBORS_COLLECTION_NAME").unwrap_or(DEFAULT_NEIGHBORS_COLLECTION_NAME.to_string()),
-            "REQUESTS_COLLECTION_NAME" => env::var("REQUESTS_COLLECTION_NAME").unwrap_or(DEFAULT_REQUESTS_COLLECTION_NAME.to_string()),
+            "REPORTS_COLLECTION_NAME" => env::var("REPORTS_COLLECTION_NAME").unwrap_or(DEFAULT_REPORTS_COLLECTION_NAME.to_string()),
+            "ORACLE_REQUESTS_COLLECTION_NAME" => env::var("ORACLE_REQUESTS_COLLECTION_NAME").unwrap_or(DEFAULT_ORACLE_REQUESTS_COLLECTION_NAME.to_string()),
             "MONGO_URL" => env::var("MONGO_URL").unwrap_or(DEFAULT_MONGO_URL.to_string()),
             "WAITING_INTERVAL" => env::var("WAITING_INTERVAL").unwrap_or(DEFAULT_WAITING_INTERVAL.to_string()),
             "CONFIRMATIONS" => env::var("CONFIRMATIONS").unwrap_or(DEFAULT_CONFIRMATIONS.to_string()),
@@ -88,8 +90,12 @@ impl Config {
         &self.data["CREDENTIALS_COLLECTION_NAME"]
     }
 
-    pub fn get_requests_collection_name(&self) -> &str {
-        &self.data["REQUESTS_COLLECTION_NAME"]
+    pub fn get_reports_collection_name(&self) -> &str {
+        &self.data["REPORTS_COLLECTION_NAME"]
+    }
+
+    pub fn get_oracle_requests_collection_name(&self) -> &str {
+        &self.data["ORACLE_REQUESTS_COLLECTION_NAME"]
     }
 
     pub fn get_api_url(&self) -> &str {

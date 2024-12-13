@@ -1,10 +1,6 @@
 use zk_oracles::services::status_exchange_service::StatusExchangeService;
-use zkcdid_lib_rs::models::status_state::StatusState;
+use zkcdid_lib_rs::models::{request_report::RequestReport, status_state::StatusState};
 
-
-pub mod status_exchange {
-    tonic::include_proto!("status_exchange");
-}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -13,7 +9,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("url={:?}", url);
     let statuses = vec![StatusState::get_sample_status()];
     let service = StatusExchangeService::new();
-    let result = service.fulfill_request(&url, &statuses).await?;
+    let report = RequestReport::new(
+        "0".to_string(),
+        0,
+        statuses.clone(),
+    );
+    let result = service.fulfill_request(&url, &report).await?;
 
     println!("RESULT={:?}", result);
 

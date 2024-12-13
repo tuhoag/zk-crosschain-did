@@ -37,7 +37,7 @@ message StatusMessage {
 }
 
 message RequestFulfillment {
-  uint64 request_id = 1;
+  string request_id = 1;
   uint32 oracle_id = 2;
   repeated StatusMessage statuses = 3;
 }

@@ -1,10 +1,9 @@
-use status_exchange::{status_exchange_service_server::{StatusExchangeService, StatusExchangeServiceServer}, HelloReply, HelloRequest};
+use mongodb::Database;
+use zkcdid_lib_rs::status_exchange::{self, status_exchange_service_server::{StatusExchangeService, StatusExchangeServiceServer}, HelloReply, HelloRequest};
 use tonic::{transport::Server, Request, Response, Status};
-use zkcdid_lib_rs::config::Config;
+use zk_oracles::services::request_report_service::RequestReportService;
+use zkcdid_lib_rs::{config::Config, models::request_report::RequestReport, utils::db};
 
-pub mod status_exchange {
-    tonic::include_proto!("status_exchange");
-}
 
 #[derive(Debug, Default)]
 pub struct MyStatusExchangeServer {}
@@ -30,6 +29,30 @@ impl StatusExchangeService for MyStatusExchangeServer {
         request: Request<status_exchange::RequestFulfillment>,
     ) -> Result<Response<status_exchange::RequestFulfillmentResult>, Status> {
         println!("Got a request: {:?}", request);
+
+        let config = Config::load_oracle_config();
+
+        println!("Connecting to database...");
+        let database: Database;
+        loop {
+            database = match db::get_db(&config).await {
+                Ok(db) => db,
+                Err(_) => continue,
+            };
+            break;
+        }
+
+        println!("Inserting or updating request report...");
+        let report_service = RequestReportService::new(&database);
+        let report = RequestReport::from(request.into_inner());
+
+        match report_service.insert_or_update(&report).await {
+            Ok(_) => println!("Request report inserted or updated successfully"),
+            Err(e) => {
+                println!("Error: {:?}", e);
+                return Err(e.into());
+            },
+        }
 
         let reply = status_exchange::RequestFulfillmentResult {
             result: true

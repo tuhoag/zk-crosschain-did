@@ -1,8 +1,11 @@
 # Stage 1: Build the Rust application
 FROM rust:latest
 
+RUN apt-get update -y && apt-get install -y protobuf-compiler
+
+
 RUN mkdir /app
-RUN mkdir /app/data_apis & mkdir /app/zkcdid-lib-rs
+RUN mkdir /app/data_apis && mkdir /app/deployments && mkdir /app/zkcdid-lib-rs
 
 # Create a new directory for the app and set it as the working directory
 WORKDIR /app/data_apis

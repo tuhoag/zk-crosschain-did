@@ -69,8 +69,10 @@ pub struct AppData {
 
 impl AppData {
     pub async fn new(config: &Config) -> ApiResult<Self> {
+        println!("Connecting to database...");
         match db::get_db(config).await {
             Ok(database) => {
+                println!("Database connected");
                 let status_service = StatusService::new(&database);
                 let credential_service = CredentialService::new(&database);
 
@@ -81,7 +83,10 @@ impl AppData {
                     config: config.clone(),
                 })
             }
-            Err(e) => Err(e.into()),
+            Err(e) => {
+                println!("Error connecting to database: {:?}", e);
+                Err(e.into())
+            },
         }
     }
 }

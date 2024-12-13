@@ -1,8 +1,8 @@
 {
   "31337": {
-    "StatusRegistry": "0x09c74b1D487880EDd0f460Ec981B18e2cFf4CdBa",
-    "Verifier": "0xf0cE8d6de1200d6F2314E87AC35f4B25c9a46f74",
-    "ChainlinkConsumer": "0xFB791E1D9eCC15fBA5AE882bED592eC2Bfe2cAA5",
-    "ZKOracleManager": "0x092dC9d36166Bd6EAE09072276216220D1Ee0adB"
+    "StatusRegistry": "0x1c3C57F695cC2B710a8Ca7b9464A29579eF01356",
+    "Verifier": "0x4eB79A7bdbC497740752bC02e04eb906F72BCd57",
+    "ChainlinkConsumer": "0x202B4a7A5d1d78eEF9c043c2183dE383B6B624c6",
+    "ZKOracleManager": "0xf5E438d8819450777e6524D8e52B9AEdbdA5dBA2"
   }
 }

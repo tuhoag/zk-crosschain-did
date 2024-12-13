@@ -1,19 +1,11 @@
-use alloy::{contract::{ContractInstance, Interface}, dyn_abi::DynSolValue, network::EthereumWallet, primitives::{Address, Uint, U256}, providers::{Provider, ProviderBuilder, WsConnect}, rpc::types::{BlockNumberOrTag, Filter}, signers::local::PrivateKeySigner, sol};
+use alloy::{contract::{ContractInstance, Interface}, dyn_abi::DynSolValue, network::EthereumWallet, primitives::{Address, Uint, U256}, providers::{Provider, ProviderBuilder, WsConnect}, rpc::types::{BlockNumberOrTag, Filter}, signers::local::PrivateKeySigner};
 use futures_util::StreamExt;
 use alloy_sol_types::SolEvent;
-use zkcdid_lib_rs::{config::Config, models::{self, oracle::Oracle}};
+use zkcdid_lib_rs::{config::Config, contracts::ZKOracleManager, models::{oracle::Oracle, oracle_request::OracleRequest, request_report::RequestReport}, utils::db};
 
-use crate::{errors::{OracleError, OracleResult}, services::status_exchange_service::StatusExchangeService, utils::solidity::{get_solidity_artifact, get_solidity_contract_address, Artifact}};
+use crate::{errors::{OracleError, OracleResult}, services::{oracle_request_service::OracleRequestService, request_report_service::RequestReportService, status_exchange_service::StatusExchangeService}, utils::solidity::{get_solidity_artifact, get_solidity_contract_address, Artifact}};
 
 use super::status_service::StatusService;
-
-sol!(
-    #[allow(missing_docs)]
-    #[sol(rpc)]
-    #[derive(Debug)]
-    ZKOracleManager,
-    "../deployments/artifacts/ZKOracleManager.json"
-);
 
 pub struct OracleManagerService {
     pub config: Config,
@@ -114,21 +106,33 @@ impl OracleManagerService {
         }).collect())
     }
 
-    pub fn is_this_oracle_aggregator(&self, request: &ZKOracleManager::Request) -> bool {
-        request.aggregatorIds.iter().any(|id| *id == self.oracle.id)
+    pub fn is_this_oracle_aggregator(&self, request: &OracleRequest) -> bool {
+        request.aggregator_ids.iter().any(|id| *id == self.oracle.id)
     }
 
-    pub async fn handle_new_request(&self, request: ZKOracleManager::Request) -> OracleResult<()> {
+    pub async fn handle_new_request(&self, request: &OracleRequest) -> OracleResult<()> {
+        let is_aggregator = self.is_this_oracle_aggregator(&request);
+        let database = db::get_db(&self.config).await?;
+        let request_service = OracleRequestService::new(&database);
+
+        if is_aggregator {
+            request_service.insert_one(&request).await?;
+        }
+
         let status_service = StatusService::new();
         let mut statuses = status_service.get_status_from_api(&request).await?;
+
+        if statuses.is_empty() {
+            return Err(OracleError::CommonError("Statuses are empty".into()));
+        }
 
         // sort statuses by time
         statuses.sort_unstable_by_key(|status| status.time);
         println!("Sorted Statuses: {:?}", statuses);
 
         // check the validity of statuses
-        let mut pre_status_time = request.lastStatusState.time;
-        let mut pre_status_status = request.lastStatusState.status;
+        let mut pre_status_time = request.last_status_state.time;
+        let mut pre_status_status = request.last_status_state.status;
 
         println!("Pre Status status: {:?}", pre_status_status);
         for status in statuses.iter() {
@@ -146,20 +150,23 @@ impl OracleManagerService {
             println!("Pre Status status: {:?}", pre_status_status);
         }
 
-        self.send_statuses_to_aggregators(&request.aggregatorIds, &statuses).await?;
+        let report = RequestReport::new(request.request_id.to_string(), self.oracle.id, statuses);
+        println!("Generated report: {:?}", report);
 
-
-        // if self.is_this_oracle_aggregator(&request) {
-        //     println!("Authorized Request: {:?}", request);
-        //     // collect statuses
-
-        //     // send it to aggregator
+        // if is_aggregator {
+        println!("Inserting report to db: {:?}", report);
+        let report_service = RequestReportService::new(&database);
+        report_service.insert_or_update(&report).await?;
         // }
+
+        println!("Sending report to aggregators...");
+        self.send_report_to_aggregators(&request.aggregator_ids, &report).await?;
+        println!("Sent report to aggregators");
 
         Ok(())
     }
 
-    pub async fn send_statuses_to_aggregators(&self, aggregator_ids: &Vec<u8>, statuses: &Vec<models::status_state::StatusState>) -> OracleResult<()> {
+    pub async fn send_report_to_aggregators(&self, aggregator_ids: &Vec<u8>, report: &RequestReport) -> OracleResult<()> {
         let service = StatusExchangeService::new();
 
         // send to all neighbors
@@ -169,8 +176,8 @@ impl OracleManagerService {
             // }
 
             let aggregator = self.get_oracle(*aggregator_id).await?;
-            println!("Aggregator: {:?}", aggregator);
-            service.fulfill_request(&aggregator.url, statuses).await?;
+            println!("Sending to Aggregator: {:?}", aggregator);
+            service.fulfill_request(&aggregator.url, report).await?;
         }
 
 
@@ -185,7 +192,7 @@ impl OracleManagerService {
             .on_ws(ws)
             .await?;
 
-        println!("address: {:?}", self.contract_address);
+        println!("contract address: {:?}", self.contract_address);
         let filter = Filter::new()
             .address(self.contract_address)
             .from_block(BlockNumberOrTag::Latest);
@@ -197,15 +204,16 @@ impl OracleManagerService {
             match log.topic0() {
                 Some(&ZKOracleManager::RequestReceived::SIGNATURE_HASH) => {
                     let ZKOracleManager::RequestReceived { requestId } = log.log_decode()?.inner.data;
-                    // println!("RequestReceived: {:?}", requestId);
+                    println!("RequestReceived: {:?}", requestId);
                     let mycontract = ZKOracleManager::new(self.contract_address, provider.clone());
                     let request = mycontract.getRequestById(requestId).call().await?._0;
-                    self.handle_new_request(request).await?;
-                    // println!("Request: {:?}", request);
+                    println!("Request: {:?}", request);
+
+                    self.handle_new_request(&request.into()).await?;
                 },
                 _ => {
                     println!("None");
-                },
+                }
             }
         }
 

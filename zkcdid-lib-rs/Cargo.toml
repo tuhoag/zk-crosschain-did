@@ -3,6 +3,9 @@ name = "zkcdid-lib-rs"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+crate-type = ["lib"]
+
 [dependencies]
 bson = "2.13.0"
 serde = { version = "1.0.214", features = ["derive"] }
@@ -16,3 +19,7 @@ mongodb = "3.1.0"
 url = "2.5.4"
 alloy = { version = "0.7.0", features = ["full"] }
 tonic = "0.12.3"
+prost = "0.13.3"
+
+[build-dependencies]
+tonic-build = "0.12.3"

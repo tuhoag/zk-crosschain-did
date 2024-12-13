@@ -48,6 +48,15 @@ pub enum OracleError {
 
     #[error("Tonic gRPC Error: {0}")]
     RPCError(#[from] tonic::Status),
+
+    #[error("Bson Serialize Error: {0}")]
+    BsonSerializeError(#[from] bson::ser::Error),
 }
 
 pub type OracleResult<T> = Result<T, OracleError>;
+
+impl From<OracleError> for tonic::Status {
+    fn from(error: OracleError) -> tonic::Status {
+        tonic::Status::new(tonic::Code::Internal, error.to_string())
+    }
+}

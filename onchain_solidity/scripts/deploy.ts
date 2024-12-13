@@ -37,8 +37,10 @@ async function deployContracts(): Promise<{ [key: string]: Contract }> {
         getConsumerDeploymentOverrides()
     );
 
+    const numAggregators = 1;
+    const numAgreements = 1;
     const oracleManagerFactory = await ethers.getContractFactory("ZKOracleManager");
-    const oracleManagerContract = await oracleManagerFactory.deploy();
+    const oracleManagerContract = await oracleManagerFactory.deploy(numAggregators, numAgreements);
     console.log(`Deployed ZKOracleManager at ${oracleManagerContract.address}`);
 
     const StatusRegistryFactory = await ethers.getContractFactory("StatusRegistry");

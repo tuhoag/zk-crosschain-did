@@ -13,6 +13,7 @@ contract ZKOracleManager {
   }
 
   struct Request {
+    bytes32 requestId;
     address requesterAddress;
     string url;
     StatusState.BSLStatus lastStatusState;
@@ -21,6 +22,7 @@ contract ZKOracleManager {
     uint64 subscriptionId;
     uint32 callbackGasLimit;
     uint8[] aggregatorIds;
+    uint8 numAgreements;
   }
 
   // event RequestReceived(string url, StatusState.BSLStatus lastStatusState, StatusState.StatusType statusType, uint32 callbackGasLimit);
@@ -30,13 +32,14 @@ contract ZKOracleManager {
   mapping(uint8 => Oracle) public oracles;
   uint8[] public oracleIds;
   Request[] public requests;
-  uint8 numAggregators;
-  uint8 currentAggregatorIndex;
+  uint8 public numAggregators;
+  uint8 public currentAggregatorIndex;
+  uint8 public numAgreements;
 
-  constructor() {
-    // numOracles = 0;
-    numAggregators = 4;
+  constructor(uint8 _numAggregators, uint8 _numAgreements) {
     currentAggregatorIndex = 0;
+    numAggregators = _numAggregators;
+    numAgreements = _numAgreements;
   }
 
   function getNumOracles() external view returns (uint256) {
@@ -107,9 +110,8 @@ contract ZKOracleManager {
     uint8[] memory aggregatorIds = getAggregators();
     currentAggregatorIndex += 1;
 
-    Request memory request = Request(requesterAddress, url, lastStatusState, statusType, StatusState.StatusMechanism.BitStatusList, subscriptionId, callbackGasLimit, aggregatorIds);
     bytes32 requestId = bytes32(requests.length);
-
+    Request memory request = Request(requestId, requesterAddress, url, lastStatusState, statusType, StatusState.StatusMechanism.BitStatusList, subscriptionId, callbackGasLimit, aggregatorIds, numAgreements);
     requests.push(request);
 
     emit RequestReceived(requestId);
