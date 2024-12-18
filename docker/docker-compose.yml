@@ -32,40 +32,74 @@ services:
     working_dir: /app/data_apis
     command: ["cargo", "watch", "-x", "run"]
 
-  oracle0:
-    build:
-      dockerfile: Dockerfile.oracle
-    depends_on:
-      - api0
-    ports:
-      - "4000:8000"
-    networks:
-      - zkssi
-    volumes:
-      - ../zk_oracles:/app/zk_oracles
-      - ../deployments:/app/deployments
-      - ../zkcdid-lib-rs:/app/zkcdid-lib-rs
-    environment:
-      - ID=0
-      - TYPE=oracle
-      - PRIVATE_KEY=${PRIVATE_KEY}
-      - MONGO_URL=mongodb://mongo:27017
-    command: ["cargo", "watch", "-x", "run --bin server"]
+  # oracle0:
+  #   build:
+  #     dockerfile: Dockerfile.oracle
+  #   depends_on:
+  #     - mongo
+  #   networks:
+  #     - zkssi
+  #   volumes:
+  #     - ../zk_oracles:/app/zk_oracles
+  #     - ../deployments:/app/deployments
+  #     - ../zkcdid-lib-rs:/app/zkcdid-lib-rs
+  #   environment:
+  #     - ID=0
+  #     - TYPE=oracle
+  #     - PRIVATE_KEY=${PRIVATE_KEY}
+  #     - MONGO_URL=mongodb://mongo:27017
+  #   command: ["cargo", "watch", "-x", "run --bin server"]
 
-  oracle0_listener:
-    build:
-      dockerfile: Dockerfile.oracle
-    depends_on:
-      - api0
-    networks:
-      - zkssi
-    volumes:
-      - ../zk_oracles:/app/zk_oracles
-      - ../deployments:/app/deployments
-      - ../zkcdid-lib-rs:/app/zkcdid-lib-rs
-    environment:
-      - ID=0
-      - TYPE=oracle
-      - PRIVATE_KEY=${PRIVATE_KEY}
-      - MONGO_URL=mongodb://mongo:27017
-    command: ["cargo", "watch", "-x", "run --bin listener"]
+  # oracle0_listener:
+  #   build:
+  #     dockerfile: Dockerfile.oracle
+  #   depends_on:
+  #     - mongo
+  #   networks:
+  #     - zkssi
+  #   volumes:
+  #     - ../zk_oracles:/app/zk_oracles
+  #     - ../deployments:/app/deployments
+  #     - ../zkcdid-lib-rs:/app/zkcdid-lib-rs
+  #   environment:
+  #     - ID=0
+  #     - TYPE=oracle
+  #     - PRIVATE_KEY=${PRIVATE_KEY}
+  #     - MONGO_URL=mongodb://mongo:27017
+  #   command: ["cargo", "watch", "-x", "run --bin listener"]
+
+  # oracle1:
+  #   build:
+  #     dockerfile: Dockerfile.oracle
+  #   depends_on:
+  #     - mongo
+  #   networks:
+  #     - zkssi
+  #   volumes:
+  #     - ../zk_oracles:/app/zk_oracles
+  #     - ../deployments:/app/deployments
+  #     - ../zkcdid-lib-rs:/app/zkcdid-lib-rs
+  #   environment:
+  #     - ID=1
+  #     - TYPE=oracle
+  #     - PRIVATE_KEY=${PRIVATE_KEY}
+  #     - MONGO_URL=mongodb://mongo:27017
+  #   command: ["cargo", "watch", "-x", "run --bin server"]
+
+  # oracle1_listener:
+  #   build:
+  #     dockerfile: Dockerfile.oracle
+  #   depends_on:
+  #     - mongo
+  #   networks:
+  #     - zkssi
+  #   volumes:
+  #     - ../zk_oracles:/app/zk_oracles
+  #     - ../deployments:/app/deployments
+  #     - ../zkcdid-lib-rs:/app/zkcdid-lib-rs
+  #   environment:
+  #     - ID=1
+  #     - TYPE=oracle
+  #     - PRIVATE_KEY=${PRIVATE_KEY}
+  #     - MONGO_URL=mongodb://mongo:27017
+  #   command: ["cargo", "watch", "-x", "run --bin listener"]

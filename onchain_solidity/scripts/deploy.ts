@@ -45,7 +45,7 @@ async function deployContracts(): Promise<{ [key: string]: Contract }> {
 
     const StatusRegistryFactory = await ethers.getContractFactory("StatusRegistry");
     const statusRegistryContract = await StatusRegistryFactory.deploy(
-        chainlinkConsumerContract.address
+        chainlinkConsumerContract.address, oracleManagerContract.address
     );
     console.log(`Deployed StatusRegistry at ${statusRegistryContract.address}`);
 

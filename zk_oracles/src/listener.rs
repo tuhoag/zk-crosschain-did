@@ -28,11 +28,19 @@ async fn initialize() -> OracleResult<()> {
 
 async fn listen() -> OracleResult<()> {
     // listen for events from the chain
-    println!("Listening for events...");
     let manager_service = OracleManagerService::new();
-    manager_service.listen_for_requests().await?;
+    println!("Listening for events from OracleManager contract at {:?}...", manager_service.contract_address);
 
-    Ok(())
+    loop {
+        match manager_service.listen_for_requests().await {
+            Ok(_) => {},
+            Err(e) => {
+                println!("Error listening for requests: {:?}", e);
+                println!("Retrying in {:?} seconds...", manager_service.config.get_waiting_interval());
+                tokio::time::sleep(tokio::time::Duration::from_secs(manager_service.config.get_waiting_interval())).await;
+            }
+        }
+    }
 }
 
 

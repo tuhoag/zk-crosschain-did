@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import "hardhat/console.sol";
 import {FunctionsClient} from "@chainlink/contracts/src/v0.8/functions/v1_0_0/FunctionsClient.sol";
 import {ConfirmedOwner} from "@chainlink/contracts/src/v0.8/shared/access/ConfirmedOwner.sol";
 import {FunctionsRequest} from "@chainlink/contracts/src/v0.8/functions/v1_0_0/libraries/FunctionsRequest.sol";
@@ -69,6 +70,7 @@ contract ChainlinkConsumer is FunctionsClient, ConfirmedOwner {
     uint64 subscriptionId,
     uint32 callbackGasLimit
   ) external returns (bytes32) {
+    console.log("Chainlink Consumer: requestBSLStatus");
     if (bytes(source).length == 0) revert Errors.EmptySource();
 
     if (requesterAddress == address(0)) revert Errors.InvalidRequesterAddress(requesterAddress);

@@ -2,6 +2,8 @@
 pragma solidity ^0.8.20;
 
 import {StatusState} from "./StatusState.sol";
+import {OracleType} from "./OracleType.sol";
+
 
 library Errors {
   error InvalidStatusType(StatusState.StatusType statusType);
@@ -16,4 +18,5 @@ library Errors {
   error InvalidDeposit(uint64 token);
   error OracleNotFound(uint256 oracleId);
   error OracleAlreadyExists(uint256 oracleId);
+  error InvalidOracleType(OracleType oracleType);
 }

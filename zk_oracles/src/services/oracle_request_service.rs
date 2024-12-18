@@ -48,4 +48,18 @@ impl OracleRequestService {
         collection.insert_one(request).await?;
         Ok(())
     }
+
+    pub async fn find_one(&self, request_id: &str, status_mechanism: StatusMechanism) -> OracleResult<Option<OracleRequest>> {
+        let collection = self.collections.get(&status_mechanism).unwrap();
+
+        let query = doc! {
+            "request_id": doc! { "$eq": request_id }
+        };
+
+        let cursor = collection
+            .find_one(query)
+            .await?;
+
+        Ok(cursor)
+    }
 }

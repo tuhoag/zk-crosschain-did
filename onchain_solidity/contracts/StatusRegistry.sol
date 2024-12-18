@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import "hardhat/console.sol";
 import {StatusState} from "./utils/StatusState.sol";
 import {IOracleConsumer} from "./utils/IOracleConsumer.sol";
 import {IVerifier} from "./utils/IVerifier.sol";
 import {Errors} from "./utils/Errors.sol";
+import {OracleType} from "./utils/OracleType.sol";
 
 /**
  * @title Chainlink Functions example on-demand consumer contract example
@@ -15,6 +17,7 @@ contract StatusRegistry {
     StatusState.IssuerId issuerId;
     StatusState.StatusType statusType;
     StatusState.StatusMechanism statusMechanism;
+    OracleType oracleType;
   }
 
   StatusState.IssuerId public constant INVALID_ISSUER_ID = StatusState.IssuerId.wrap(0);
@@ -27,9 +30,11 @@ contract StatusRegistry {
   mapping(StatusState.IssuerId => StatusState.BSLStatus) public bslRevocationStatuses;
 
   IOracleConsumer public consumerContract;
+  IOracleConsumer public zkConsumerContract;
 
-  constructor(address consumerAddress) {
+  constructor(address consumerAddress, address zkConsumerAddress) {
     consumerContract = IOracleConsumer(consumerAddress);
+    zkConsumerContract = IOracleConsumer(zkConsumerAddress);
   }
 
   function getIssuer(StatusState.IssuerId issuerId) external view returns (StatusState.Issuer memory) {
@@ -49,6 +54,13 @@ contract StatusRegistry {
     if (bytes(url).length == 0) revert Errors.InvalidUrl(url);
 
     issuers[issuerId] = StatusState.Issuer(url, statusMechanism);
+  }
+
+  function getConsumerAddress(OracleType oracleType) external view returns (address) {
+    if (oracleType == OracleType.ChainlinkConsumer) return address(consumerContract);
+    if (oracleType == OracleType.ZKConsumer) return address(zkConsumerContract);
+
+    revert Errors.InvalidOracleType(oracleType);
   }
 
   function getBSLStatus(
@@ -89,6 +101,7 @@ contract StatusRegistry {
     StatusState.IssuerId issuerId,
     StatusState.StatusType statusType,
     bool refresh,
+    OracleType oracleType,
     uint64 subscriptionId,
     uint32 callbackGasLimit
   ) external returns (bytes32) {
@@ -108,16 +121,35 @@ contract StatusRegistry {
     }
 
     bytes32 requestId;
+    console.log("StatusRegistry: request consumer. Is it chainlink %s, is it ZK %s", oracleType == OracleType.ChainlinkConsumer, oracleType == OracleType.ZKConsumer);
+
     if (refresh) {
-      requestId = consumerContract.requestBSLStatus(
-        address(this),
-        issuer.url,
-        lastStatusState,
-        statusType,
-        subscriptionId,
-        callbackGasLimit
-      );
-      requests[requestId] = Request(requesterAddress, issuerId, statusType, issuer.statusMechanism);
+      if (oracleType == OracleType.ChainlinkConsumer) {
+        console.log("StatusRegistry: request chainlink consumer");
+        requestId = consumerContract.requestBSLStatus(
+          address(this),
+          issuer.url,
+          lastStatusState,
+          statusType,
+          subscriptionId,
+          callbackGasLimit
+        );
+      } else if (oracleType == OracleType.ZKConsumer) {
+        // console.log("StatusRegistry: request consumer. Is it chainlink %s, is it ZK %s", oracleType == OracleType.ChainlinkConsumer, oracleType == OracleType.ZKConsumer);
+        console.log("StatusRegistry: requesting zk consumer %s", uint8(oracleType));
+        requestId = zkConsumerContract.requestBSLStatus(
+          address(this),
+          issuer.url,
+          lastStatusState,
+          statusType,
+          subscriptionId,
+          callbackGasLimit
+        );
+      } else {
+        revert Errors.InvalidOracleType(oracleType);
+      }
+
+      requests[requestId] = Request(requesterAddress, issuerId, statusType, issuer.statusMechanism, oracleType);
     } else {
       requestId = bytes32(0);
       IVerifier verifier = IVerifier(requesterAddress);

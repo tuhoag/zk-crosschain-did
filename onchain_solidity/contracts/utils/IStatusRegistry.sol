@@ -2,6 +2,7 @@
 pragma solidity ^0.8.20;
 
 import {StatusState} from "./StatusState.sol";
+import {OracleType} from "./OracleType.sol";
 
 interface IStatusRegistry {
   function requestStatus(
@@ -9,6 +10,7 @@ interface IStatusRegistry {
     StatusState.IssuerId issuerId,
     StatusState.StatusType statusType,
     bool refresh,
+    OracleType oracleType,
     uint64 subscriptionId,
     uint32 callbackGasLimit
   ) external returns (bytes32);

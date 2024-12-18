@@ -1,7 +1,7 @@
 use mongodb::Database;
-use zkcdid_lib_rs::status_exchange::{self, status_exchange_service_server::{StatusExchangeService, StatusExchangeServiceServer}, HelloReply, HelloRequest};
+use zkcdid_lib_rs::{models::oracle_request::OracleRequest, status_exchange::{self, status_exchange_service_server::{StatusExchangeService, StatusExchangeServiceServer}, HelloReply, HelloRequest}};
 use tonic::{transport::Server, Request, Response, Status};
-use zk_oracles::services::request_report_service::RequestReportService;
+use zk_oracles::services::{oracle_manager_service, oracle_request_service::OracleRequestService, request_report_service::RequestReportService};
 use zkcdid_lib_rs::{config::Config, models::request_report::RequestReport, utils::db};
 
 
@@ -53,6 +53,38 @@ impl StatusExchangeService for MyStatusExchangeServer {
                 return Err(e.into());
             },
         }
+
+        println!("Checking the number of reports is enough to fulfill the request...");
+        let mechanism = report.statuses[0].status_mechanism;
+        let oracle_manager_service = oracle_manager_service::OracleManagerService::new();
+        // if oracle_manager_service.check_reports(&report.request_id, mechanism).await? {
+        //     oracle_manager_service.send_reports_to_contract(&report.request_id).await?;
+        // }
+
+        let mechanism = report.statuses[0].status_mechanism;
+        let num_reports = report_service.get_num_reports_by_request_id(&report.request_id, mechanism).await?;
+        println!("Number of reports: {}", num_reports);
+
+        // check the number of agreements
+        let request_service = OracleRequestService::new(&database);
+        // let request = request_service.find_one(&report.request_id, mechanism).await?;
+        match request_service.find_one(&report.request_id, mechanism).await? {
+            Some(r) => {
+                println!("Number of agreements: {}", r.num_agreements);
+
+                if r.num_agreements <= num_reports {
+                    println!("All agreements are collected. Fulfilling the request...");
+                    let reports = report_service.get_reports_by_request_id(&report.request_id, mechanism).await?;
+                    // println!("Reports: {:?}", reports);
+
+                    // send report to the contract
+                    oracle_manager_service.send_last_status_to_contract(&report.request_id, &reports).await?;
+                }
+            },
+            None => {
+                return Err(Status::invalid_argument("Request not found"));
+            }
+        };
 
         let reply = status_exchange::RequestFulfillmentResult {
             result: true

@@ -1,3 +1,4 @@
+use alloy::hex::ToHexExt;
 use bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
@@ -45,7 +46,7 @@ impl OracleRequest {
 
 impl From<ZKOracleManager::Request> for OracleRequest {
     fn from(value: ZKOracleManager::Request) -> Self {
-        let request_id = value.requestId.to_string();
+        let request_id = value.requestId.encode_hex();
         let url = value.url;
         let status_mechanism = (value.statusMechanism as i32).into();
         let status_type = (value.statusType as i32).into();

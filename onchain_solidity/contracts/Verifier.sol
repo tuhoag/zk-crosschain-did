@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import {console} from "hardhat/console.sol";
+
 import {StatusState} from "./utils/StatusState.sol";
 import {IStatusRegistry} from "./utils/IStatusRegistry.sol";
 import {Errors} from "./utils/Errors.sol";
+import {OracleType} from "./utils/OracleType.sol";
 
 /**
  * @title Chainlink Functions example on-demand consumer contract example
@@ -53,9 +56,11 @@ contract Verifier {
     StatusState.IssuerId issuerId,
     StatusState.StatusType statusType,
     bool refresh,
+    OracleType oracleType,
     uint32 callbackGasLimit
   ) external {
-    registryContract.requestStatus(address(this), issuerId, statusType, refresh, subscriptionId, callbackGasLimit);
+    console.log(uint8(oracleType));
+    registryContract.requestStatus(address(this), issuerId, statusType, refresh, oracleType, subscriptionId, callbackGasLimit);
   }
 
   function fulfillBSLStatus(

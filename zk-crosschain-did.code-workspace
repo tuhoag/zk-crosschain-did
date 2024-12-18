@@ -41,6 +41,7 @@
         },
         "[shellscript]": {
             "editor.defaultFormatter": "mads-hartmann.bash-ide-vscode"
-        }
+        },
+        "solidity.defaultCompiler": "localNodeModule"
     }
 }

@@ -49,7 +49,7 @@ impl RequestReportService {
         let mechanism = request.statuses[0].status_mechanism;
 
         if self.is_existed(&request.request_id, request.oracle_id, mechanism).await? {
-            return Err(OracleError::CommonError("Request already existed".to_string()));
+            return Err(OracleError::CommonError("Report already existed".to_string()));
         }
 
         let collection = self.collections.get(&mechanism).unwrap();
@@ -120,5 +120,34 @@ impl RequestReportService {
         }
 
         Ok(())
+    }
+
+    pub async fn get_reports_by_request_id(&self, request_id: &str, mechanism: StatusMechanism) -> OracleResult<Vec<RequestReport>> {
+        let collection = self.collections.get(&mechanism).unwrap();
+
+        let query = doc! {
+            "request_id": doc! { "$eq": request_id }
+        };
+
+        let cursor = collection
+            .find(query)
+            .await?;
+        let requests = cursor.try_collect::<Vec<RequestReport>>().await?;
+
+        Ok(requests)
+    }
+
+    pub async fn get_num_reports_by_request_id(&self, request_id: &str, mechanism: StatusMechanism) -> OracleResult<u8> {
+        let collection = self.collections.get(&mechanism).unwrap();
+
+        let query = doc! {
+            "request_id": doc! { "$eq": request_id }
+        };
+
+        let num_reports = collection
+            .count_documents(query)
+            .await?;
+
+        Ok(num_reports as u8)
     }
 }

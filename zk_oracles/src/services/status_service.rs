@@ -31,6 +31,7 @@ impl StatusService {
         println!("Getting statuses url: {:?}", url);
         // let url = format!("{}/status", self.config.get_api_url());
         let response = Client::new().get(url).send().await?;
+        println!("Response: {:?}", response);
 
         if response.status().is_success() {
             let str_response = response.text().await?;

@@ -1,8 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import "hardhat/console.sol";
+
 import {StatusState} from "./utils/StatusState.sol";
 import {Errors} from "./utils/Errors.sol";
+import {IStatusRegistry} from "./utils/IStatusRegistry.sol";
+
 
 contract ZKOracleManager {
   struct Oracle {
@@ -28,6 +32,8 @@ contract ZKOracleManager {
   // event RequestReceived(string url, StatusState.BSLStatus lastStatusState, StatusState.StatusType statusType, uint32 callbackGasLimit);
   event RequestReceived(bytes32 requestId);
   event OracleAdded(Oracle oracle);
+  event ResponseReceived(bytes32 requestId, bytes response, bytes err);
+  event StatusReceived(bytes32 requestId, uint64 time, uint64 status);
 
   mapping(uint8 => Oracle) public oracles;
   uint8[] public oracleIds;
@@ -83,6 +89,12 @@ contract ZKOracleManager {
 
   function getRequestById(bytes32 requestId) external view returns (Request memory) {
     uint256 index = uint256(requestId);
+
+    console.log("getRequestById");
+    console.log(requests.length);
+    console.log(index);
+    console.log(index >= requests.length);
+
     if (index >= requests.length) revert Errors.RequestNotFound(requestId);
 
     return requests[index];
@@ -98,6 +110,13 @@ contract ZKOracleManager {
     return result;
   }
 
+// address requesterAddress,
+//     string memory url,
+//     StatusState.BSLStatus memory lastStatusState,
+//     StatusState.StatusType statusType,
+//     uint64 subscriptionId,
+//     uint32 callbackGasLimit
+//   ) external returns (bytes32);
   function requestBSLStatus(
     address requesterAddress,
     string memory url,
@@ -107,6 +126,7 @@ contract ZKOracleManager {
     uint32 callbackGasLimit
   ) external returns (bytes32) {
     // assign aggregators
+    console.log("ZK Oracle: requestStatus");
     uint8[] memory aggregatorIds = getAggregators();
     currentAggregatorIndex += 1;
 
@@ -117,4 +137,51 @@ contract ZKOracleManager {
     emit RequestReceived(requestId);
     return requestId;
   }
+
+  function fulfillRequestWithLastStatus(bytes32 requestId, bytes memory response, bytes memory err) external {
+    Request memory request = this.getRequestById(requestId);
+
+    if (request.statusMechanism == StatusState.StatusMechanism.BitStatusList) {
+      IStatusRegistry registry = IStatusRegistry(request.requesterAddress);
+      if (response.length > 0) {
+        (uint64 time, uint64 status) = abi.decode(response, (uint64, uint64));
+        emit StatusReceived(requestId, time, status);
+        registry.fulfillBSLStatus(requestId, request.statusType, StatusState.BSLStatus(time, status));
+      } else {
+        registry.fulfillBSLStatus(requestId, StatusState.StatusType.Invalid, StatusState.BSLStatus(0, 0));
+      }
+    } else {
+      revert Errors.UnsupportedStatusMechanism(request.statusMechanism);
+    }
+  }
+
+  function fulfillRequestWithAllStatuses(bytes32 requestId, bytes memory response, bytes memory err) external {
+    Request memory request = this.getRequestById(requestId);
+
+    if (request.statusMechanism == StatusState.StatusMechanism.BitStatusList) {
+      IStatusRegistry registry = IStatusRegistry(request.requesterAddress);
+      if (response.length > 0) {
+        // extract data from the response
+        StatusState.BSLStatus[] memory statuses = abi.decode(response, (StatusState.BSLStatus[]));
+        for (uint8 i = 0; i < statuses.length; i++) {
+          StatusState.BSLStatus memory status = statuses[i];
+          emit StatusReceived(requestId, status.time, status.status);
+          registry.fulfillBSLStatus(requestId, request.statusType, status);
+        }
+      } else {
+        registry.fulfillBSLStatus(requestId, StatusState.StatusType.Invalid, StatusState.BSLStatus(0, 0));
+      }
+    } else {
+      revert Errors.UnsupportedStatusMechanism(request.statusMechanism);
+    }
+
+
+    // send it to the registry
+
+
+
+    emit ResponseReceived(requestId, response, err);
+  }
+
+
 }

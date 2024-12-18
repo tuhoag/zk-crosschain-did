@@ -1,7 +1,8 @@
-use alloy::{contract::{ContractInstance, Interface}, dyn_abi::DynSolValue, network::EthereumWallet, primitives::{Address, Uint, U256}, providers::{Provider, ProviderBuilder, WsConnect}, rpc::types::{BlockNumberOrTag, Filter}, signers::local::PrivateKeySigner};
+use alloy::{contract::{ContractInstance, Interface}, dyn_abi::{DynSolError, DynSolType, DynSolValue}, hex::{self, encode}, network::EthereumWallet, primitives::{address, Address, FixedBytes, Uint, U256, U64, Bytes}, providers::{Provider, ProviderBuilder, WsConnect}, rpc::types::{request, BlockNumberOrTag, Filter}, signers::local::PrivateKeySigner};
+// use alloy::primitives::{fixed_bytes, b256, Bytes};
 use futures_util::StreamExt;
-use alloy_sol_types::SolEvent;
-use zkcdid_lib_rs::{config::Config, contracts::ZKOracleManager, models::{oracle::Oracle, oracle_request::OracleRequest, request_report::RequestReport}, utils::db};
+use alloy_sol_types::{SolEvent};
+use zkcdid_lib_rs::{config::Config, contracts::ZKOracleManager, models::{oracle::Oracle, oracle_request::OracleRequest, request_report::RequestReport, status_state::StatusMechanism}, utils::db};
 
 use crate::{errors::{OracleError, OracleResult}, services::{oracle_request_service::OracleRequestService, request_report_service::RequestReportService, status_exchange_service::StatusExchangeService}, utils::solidity::{get_solidity_artifact, get_solidity_contract_address, Artifact}};
 
@@ -10,7 +11,7 @@ use super::status_service::StatusService;
 pub struct OracleManagerService {
     pub config: Config,
     oracle: Oracle,
-    contract_address: Address,
+    pub contract_address: Address,
     contract_artifact: Artifact,
     wallet: EthereumWallet,
     // collection: Collection<Oracle>,
@@ -115,9 +116,9 @@ impl OracleManagerService {
         let database = db::get_db(&self.config).await?;
         let request_service = OracleRequestService::new(&database);
 
-        if is_aggregator {
-            request_service.insert_one(&request).await?;
-        }
+        // if is_aggregator {
+        request_service.insert_one(&request).await?;
+        // }
 
         let status_service = StatusService::new();
         let mut statuses = status_service.get_status_from_api(&request).await?;
@@ -192,7 +193,7 @@ impl OracleManagerService {
             .on_ws(ws)
             .await?;
 
-        println!("contract address: {:?}", self.contract_address);
+        // println!("Oracle Manager Contract address: {:?}", self.contract_address);
         let filter = Filter::new()
             .address(self.contract_address)
             .from_block(BlockNumberOrTag::Latest);
@@ -205,10 +206,11 @@ impl OracleManagerService {
                 Some(&ZKOracleManager::RequestReceived::SIGNATURE_HASH) => {
                     let ZKOracleManager::RequestReceived { requestId } = log.log_decode()?.inner.data;
                     println!("RequestReceived: {:?}", requestId);
-                    let mycontract = ZKOracleManager::new(self.contract_address, provider.clone());
-                    let request = mycontract.getRequestById(requestId).call().await?._0;
-                    println!("Request: {:?}", request);
+                    let contract = ZKOracleManager::new(self.contract_address, provider.clone());
 
+                    let request = contract.getRequestById(requestId).call().await?._0;
+
+                    println!("Handling Request: {:?}", request);
                     self.handle_new_request(&request.into()).await?;
                 },
                 _ => {
@@ -217,6 +219,102 @@ impl OracleManagerService {
             }
         }
 
+        Ok(())
+    }
+
+    pub async fn check_reports(&self, request_id: &str, mechanism: StatusMechanism) -> OracleResult<()> {
+        let database = db::get_db(&self.config).await?;
+        let report_service = RequestReportService::new(&database);
+        let num_reports = report_service.get_num_reports_by_request_id(request_id, mechanism).await?;
+        println!("Number of reports: {}", num_reports);
+
+        // check the number of agreements
+        let request_service = OracleRequestService::new(&database);
+        // let request = request_service.find_one(&report.request_id, mechanism).await?;
+        match request_service.find_one(request_id, mechanism).await? {
+            Some(r) => {
+                println!("Number of agreements: {}", r.num_agreements);
+
+                if r.num_agreements <= num_reports {
+                    println!("All agreements are collected. Fulfilling the request...");
+                    let reports = report_service.get_reports_by_request_id(request_id, mechanism).await?;
+                    // println!("Reports: {:?}", reports);
+
+                    // check the report validity
+
+                    // send the valid one to the contract
+                    self.send_last_status_to_contract(request_id, &reports).await?;
+                    // self.send_all_statuses_to_contract(request_id, &reports).await?;
+                }
+            },
+            None => {
+                return Err(OracleError::CommonError("Request not found".to_string()));
+            }
+        };
+
+        Ok(())
+    }
+
+    pub async fn send_last_status_to_contract(&self, request_id: &str, reports: &Vec<RequestReport>) -> OracleResult<()> {
+        // let ws = WsConnect::new(self.config.get_solidity_ws_rpc_url());
+        let provider = ProviderBuilder::new()
+            .with_recommended_fillers()
+            // .with_simple_nonce_management()
+            // .with_cached_nonce_management()
+            // .with_recommended_fillers()
+            .wallet(self.wallet.clone())
+            .on_http(self.config.get_solidity_http_rpc_url().parse().unwrap());
+            // .await?;
+
+        let contract = ZKOracleManager::new(self.contract_address, provider);
+
+        let last_report = reports.last().unwrap();
+        let status = last_report.statuses.last().unwrap();
+
+        println!("fulfilling request_id: {:?}", request_id);
+        let re_bytes: [u8; 32];
+        match hex::decode(request_id) {
+            Ok(v) => match v.as_slice().try_into() {
+                Ok(v) => {
+                    re_bytes = v;
+                },
+                Err(e) => return Err(OracleError::CommonError(format!("Cannot parse request_id: {:?} with err: {:?}", request_id, e))),
+            },
+            Err(e) => return Err(OracleError::CommonError(format!("Cannot parse request_id: {:?} with err: {:?}", request_id, e))),
+        };
+
+        let onchain_request_id: FixedBytes<32> = FixedBytes::from(re_bytes);
+
+        let response_value = DynSolValue::Tuple(vec![
+            DynSolValue::Uint(U256::from(status.time), 64),
+            DynSolValue::Uint(U256::from(status.status), 64)
+        ]);
+
+        let response_bytes = Bytes::from(response_value.abi_encode());
+
+        println!("Calling fulfillRequestWithLastStatus...");
+        let builder = contract.fulfillRequestWithLastStatus(onchain_request_id, response_bytes.clone(), Bytes::new());
+        println!("builder: {:?}", builder);
+
+        let receipt = builder.send().await?.get_receipt().await?;
+        println!("Receipt: {:?}", receipt);
+
+        // println!("Tx: {:?}", tx);
+
+        // let receipt = tx.get_receipt().await?;
+
+        // println!("Gas Used: {:?}", receipt.gas_used);
+
+        Ok(())
+    }
+
+    pub async fn send_all_statuses_to_contract(&self, request_id: &str, report: &Vec<RequestReport>) -> OracleResult<()> {
+
+
+        Ok(())
+    }
+
+    pub async fn send_all_statuses_to_contract_with_zk(&self, request_id: &str, report: &Vec<RequestReport>) -> OracleResult<()> {
         Ok(())
     }
 }
