@@ -1,0 +1,23 @@
+# Stage 1: Build the Rust application
+FROM rust:latest
+
+RUN apt-get update -y && apt-get install -y protobuf-compiler
+
+
+RUN mkdir /app
+RUN mkdir /app/data_apis && mkdir /app/deployments && mkdir /app/zkcdid-lib-rs
+
+# Create a new directory for the app and set it as the working directory
+WORKDIR /app/data_apis
+
+# Install
+RUN cargo install cargo-watch
+
+# # Copy the entire project source code
+# COPY . .
+
+# Expose port for the web API
+EXPOSE 8000
+
+
+CMD ["sh", "-c", "cargo watch -x run"]
