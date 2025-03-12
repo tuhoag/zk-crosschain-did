@@ -1,0 +1,5 @@
+num_credentials,height,data_size,num_oracles,num_states,mechanism,algorithm
+16384,15,64,4,5,bsl,zkCrossChainSSI
+16384,15,64,4,10,bsl,zkCrossChainSSI
+16384,15,64,4,15,bsl,zkCrossChainSSI
+16384,15,64,4,20,bsl,zkCrossChainSSI
