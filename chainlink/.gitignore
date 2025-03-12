@@ -122,3 +122,6 @@ updatedAllowlist.csv
 
 zkit
 output
+zkssi
+go.sum
+circuits-go/build
